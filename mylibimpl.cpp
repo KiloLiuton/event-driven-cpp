@@ -70,13 +70,14 @@ Lattice::Lattice(int size, int neighbors)
 {
 	N = size;
 	k = neighbors;
-	Topology.regularRing(N, k);
+	topology.regularRing(N, k);
 }
 
 // allocate states vector and randomize its entries
 void Lattice::initializeStates(pcg64& rng)
 {
 	states.resize(N);
+	int state;
 	for(int i = 0; i < N; ++i) {
 		state = rng(3);
 		states[i] = state;
