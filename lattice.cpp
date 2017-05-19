@@ -15,6 +15,7 @@ Lattice::Lattice(int N, int k, double p, pcg64& rng) : Topology(N,k,p) // topolo
 	transitionRates.resize(N);
 
 	initializeStates(rng);
+	calculateTransitionsTable();
 }
 
 // allocate 'states' vector and randomize its entries
@@ -39,7 +40,16 @@ void Lattice::initializeStates(pcg64& rng)
 
 void Lattice::calculateTransitionsTable()
 {
-	// g = exp[a*(Knext - Ksame)/K]
+	// transition rate: g = exp[a*(Knext - Ksame)/K]
+	// number of possible transitions: (kmax + kmin + 1)*(kmax - kmin + 1)
+	transitionsTable.resize((maxNeighbors+minNeighbors+1)*(maxNeighbors-minNeighbors+1));
+	int i = 0;
+	for(int k = minNeighbors; k < maxNeighbors+1; ++k) {
+		for(int ki = -k; ki < k+1; ++ki) {
+			// TODO calculate transition and assign to transitionsTable[i]
+			++i;
+		}
+	}
 }
 
 void Lattice::updateTransitionRates()
@@ -56,9 +66,8 @@ double Lattice::getOrderParameter()
 void Lattice::print()
 {
 	std::cout << "states: ";
-	for(int i = 0; i < N; ++i) { std::cout << states[i] << " ";	}
+	for(int i = 0; i < N; ++i) std::cout << states[i] << " ";
 	std::cout << std::endl;
-	std::cout << "populations: ";
-	std::cout << N0 << " " << N1 << " " << N2;
-	std::cout << std::endl;
+	std::cout << "populations: " << N0 << " " << N1 << " " << N2 << std::endl;
+	std::cout << "min/max neighbors: " << minNeighbors << "," << maxNeighbors << std::endl;
 }

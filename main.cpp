@@ -18,6 +18,11 @@ int main(int argc, char *argv[]) {
 	double r = lattice.getOrderParameter();
 	lattice.print();
 	std::cout << "r = " << r << std::endl;
+
+	std::vector<int> foo = lattice.getNeighbors(0);
+	for(const auto& x : foo) std::cout << x << " ";
+	std::cout << std::endl;
+
 	lattice.printTopology();
 
 	return 0;

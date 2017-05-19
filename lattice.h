@@ -1,5 +1,5 @@
-#ifndef MYLIB_INCLUDED
-#define MYLIB_INCLUDED
+#ifndef LATTICE_H_INCLUDED
+#define LATTICE_H_INCLUDED
 
 #include <iostream>
 #include <vector>
@@ -7,7 +7,7 @@
 #include "pcg_random.hpp"
 #include "topology.h"
 
-class Lattice : Topology {
+class Lattice : public Topology {
 public:
 	Lattice(int, int, double, pcg64&);
 	// TODO implement rewiring: Lattice(int, int, double);
@@ -15,7 +15,6 @@ public:
 	void initializeStates(pcg64& rng);
 	void updateTransitionRates(); // TODO
 	double getOrderParameter();
-
 
 	void print();
 private:
