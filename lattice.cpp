@@ -6,20 +6,22 @@
 #include "topology.h"
 
 // set lattice size N, k, and topology at initialization
-Lattice::Lattice(int N, int k, double p, pcg64& rng) : Topology(N,k,p) // topology has no default constructor
+Lattice::Lattice(int N, int k, double a, double p, pcg64& rng) : Topology(N,k,p), rng(rng) // topology has no default constructor
 {
 	this->N = N;
 	this->k = k;
+	this->a = a;
 	this->p = p;
+
 	states.resize(N);
 	transitionRates.resize(N);
 
-	initializeStates(rng);
+	initializeStates();
 	calculateTransitionsTable();
 }
 
 // allocate 'states' vector and randomize its entries
-void Lattice::initializeStates(pcg64& rng)
+void Lattice::initializeStates()
 {
 	N0 = N1 = N2 = 0;
 	short int state;
@@ -46,7 +48,7 @@ void Lattice::calculateTransitionsTable()
 	int i = 0;
 	for(int k = minNeighbors; k < maxNeighbors+1; ++k) {
 		for(int ki = -k; ki < k+1; ++ki) {
-			// TODO calculate transition and assign to transitionsTable[i]
+			transitionsTable[i] = exp(a*ki/k);
 			++i;
 		}
 	}
