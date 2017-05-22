@@ -15,18 +15,19 @@ public:
 	void initializeStates();
 	void updateTransitionRates(); // TODO
 	double getOrderParameter();
-	void setOrderParameter();
+	void setCouplingStrength();
 	void print();
 private:
 	std::vector<short int> states;
 	std::vector<double> transitionRates;
 	std::vector<double> transitionsTable;
-
-	void calculateTransitionsTable();
-	int N, k; // size and number of forward neighbors
+	int N, k, kMin, kMax; // size and number of forward neighbors
 	int N0, N1, N2; // individual state populations
 	double p, a; // reconnection probability and coupling strength
 	pcg64& rng;
+
+	void calculateTransitionsTable();
+	int expIndex(int, int);
 };
 
 #endif

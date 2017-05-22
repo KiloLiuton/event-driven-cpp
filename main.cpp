@@ -51,5 +51,7 @@ int main(int argc, char *argv[]) {
 	for(int i = 0; i < 10; ++i) std::cout << rng2(6) << " ";
 	std::cout << std::endl;
 
+	std::cout << exp(1.5*2/4) << std::endl;
+
 	return 0;
 }
