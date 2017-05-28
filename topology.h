@@ -9,6 +9,7 @@
 class Topology {
 public:
 	int minNeighbors, maxNeighbors;
+	std::vector<int> kernelSizes;
 
 	Topology(int, int, double);
 	std::vector<int> getNeighbors(int);

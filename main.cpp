@@ -28,12 +28,15 @@ int main(int argc, char *argv[]) {
 	// seed rng
 	pcg64 rng(42u, 54u);
 	if(non_deterministic_seed) rng.seed(pcg_extras::seed_seq_from<std::random_device>());
+	std::uniform_real_distribution<double> uniform(0,1);
 
-	Lattice lattice(10,2,1.5,0.0,rng);
+	// create a lattice instance
+	Lattice lattice(10,3,1.5,0.0,rng);
 	double r = lattice.getOrderParameter();
 	lattice.print();
 	std::cout << "r = " << r << std::endl;
 
+	// get neighbors of site 0
 	std::vector<int> foo = lattice.getNeighbors(0);
 	for(const auto& x : foo) std::cout << x << " ";
 	std::cout << std::endl;

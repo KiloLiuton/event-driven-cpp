@@ -11,6 +11,7 @@ Topology::Topology(int N, int k, double p)
 	this->p = p;
 
 	connectome.resize((N*N-N)/2, false);
+	kernelSizes.resize(N, 0);
 	regularRing(); // TODO generalize to rewired rings
 
 	// get minimum and maximum number of neighbors
@@ -23,9 +24,9 @@ Topology::Topology(int N, int k, double p)
 	}
 }
 
-// return all neighbors of site x by sweeping row and then column
 std::vector<int> Topology::getNeighbors(int x)
 {
+	// return all neighbors of site x by sweeping row and then column
 	std::vector<int> neighbors;
 
 	for(int j = x+1; j < N; ++j) {
@@ -42,9 +43,9 @@ std::vector<int> Topology::getNeighbors(int x)
 	return neighbors;
 }
 
-// print the half-matrix connectome
 void Topology::printTopology()
 {
+	// print the half-matrix connectome
 	for(int i = 0; i < N-1; ++i) {
 		for(int j = N-i; j < N; ++j) { std::cout << "- "; }
 		for(int j = i+1; j < N; ++j) { std::cout << connectome[index(i,j)] << " "; }
@@ -52,14 +53,18 @@ void Topology::printTopology()
 	}
 }
 
-// allocate connectome with a regular ring topology
 void Topology::regularRing()
 {
+	// allocate connectome with a regular ring topology
 	int idx;
 	for(int i = 0; i < N-1; ++i) {
 		for(int j = i+1; j < N; ++j) {
 			idx = index(i,j);
-			if(j <= i+k || j >= N-k+i) connectome[idx] = true;
+			if(j <= i+k || j >= N-k+i) { // if i is connected to j increment its kernels
+				connectome[idx] = true;
+				++kernelSizes[i];
+				++kernelSizes[j];
+			}
 		}
 	}
 	std::cout << "Created regular ring with N=" << N << " and k=" << k << std::endl;
@@ -67,9 +72,9 @@ void Topology::regularRing()
 
 
 
-// convert (i,j) notation to compact notation with bounds checking
 int Topology::index(int i, int j)
 {
+	// convert (i,j) notation to compact notation with bounds checking
 	if(i >= N-1 || i < 0 || j < 1 || j >= N) {
 		throw std::runtime_error("index out of bounds in topology");
 	}
