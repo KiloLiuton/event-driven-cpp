@@ -15,7 +15,7 @@ public:
 	Lattice(int, int, double, double, pcg64&);
 
 	double getOrderParameter();
-	void setCouplingStrength();
+	void setCouplingStrength(); //TODO
 	void print();
 private:
 	std::vector<short int> states;
@@ -30,10 +30,10 @@ private:
 	double totalRate;
 
 	void initializeStates();
-	void initializeDeltas();
+	void initializeDeltasAndRates();
 	int chooseEvent();
-	void transitionSite(int); // TODO
-	int getSiteDelta(int); // TODO
+	void transitionSite(int);
+	int getSiteDelta(int);
 
 	void calculateTransitionsTable();
 	int expIndex(int, int);

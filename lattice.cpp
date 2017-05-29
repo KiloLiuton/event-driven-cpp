@@ -18,9 +18,9 @@ Lattice::Lattice(int N, int k, double a, double p, pcg64& rng) : Topology(N,k,p)
 	transitionRates.resize(N);
 	deltas.resize(N);
 
-	calculateTransitionsTable();
 	initializeStates();
-	initializeDeltas(); // also sets totalRate and transitionRates
+	calculateTransitionsTable();
+	initializeDeltasAndRates(); // also sets totalRate and transitionRates
 }
 
 void Lattice::initializeStates()
@@ -32,18 +32,22 @@ void Lattice::initializeStates()
 		state = (short int) rng(3);
 		states[i] = state;
 		switch(state) {
-			case 0: ++N0;
-					break;
-			case 1: ++N1;
-					break;
-			case 2: ++N2;
-					break;
-			default: throw std::runtime_error("invalid state value assigned to states vector");
+			case 0:
+				++N0;
+				break;
+			case 1:
+				++N1;
+				break;
+			case 2:
+				++N2;
+				break;
+			default:
+					throw std::runtime_error("invalid state value in 'initializeStates'");
 		}
 	}
 }
 
-void Lattice::initializeDeltas()
+void Lattice::initializeDeltasAndRates()
 {
 	// get the delta value for each site and get its transition rate
 	for(int i = 0; i < N; ++i) {
@@ -74,7 +78,8 @@ int Lattice::getSiteDelta(int site)
 
 int Lattice::chooseEvent()
 {
-	// choose a site to suffer a transition proportionally to its transition rate
+	// choose a site to suffer a transition proportionally to its transition rate.
+	// an 'event' is the index of the site that suffered a transition
 	double partialRate = 0, g = 0;
 	double randomRate = uniform(rng) * totalRate;
 	for(int event = 0; event < N; ++event) {
@@ -82,7 +87,7 @@ int Lattice::chooseEvent()
 		partialRate += g;
 		if(randomRate < partialRate) return event;
 	}
-	throw std::runtime_error("no valid event chosen at function end");
+	throw std::runtime_error("no valid event chosen at function's 'chooseEvent' end");
 }
 
 void Lattice::transitionSite(int site)
@@ -90,7 +95,24 @@ void Lattice::transitionSite(int site)
 	// this function is called if 'site' transitioned. Then, update its state, delta and transition rate.
 	// also updates its neighbors deltas and transition rates.
 	short int newState = (states[site]+1)%3;
+	short int newNextState = (newState+1)%3;
 	states[site] = newState;
+	switch(newState) {
+		case 0:
+			++N0;
+			--N2;
+			break;
+		case 1: 
+			++N1;
+			--N0;
+			break;
+		case 2:
+			++N2;
+			--N1;
+			break;
+		default:
+			throw std::runtime_error("transitioned to an invalid state in 'transitionSite'");
+	}
 
 	std::vector<int> neighbors = Topology::getNeighbors(site);
 	for(const auto& n : neighbors) {
@@ -98,46 +120,21 @@ void Lattice::transitionSite(int site)
 		if(neighborState == newState) {
 			deltas[site] -= 2;
 			deltas[n] -= 1;
-			transitionRates[site] = transitionsTable[expIndex(neighbors.size(), deltas[site])];
-			transitionRates[n] = transitionsTable[expIndex(Topology::kernelSizes[n], deltas[n])];
 		}
-		else if(neighborState == (newState+1)%3) {
+		else if(neighborState == newNextState) {
 			deltas[site] += 1;
 			deltas[n] -= 1;
-			transitionRates[site] = transitionsTable[expIndex(neighbors.size(), deltas[site])];
-			transitionRates[n] = transitionsTable[expIndex(Topology::kernelSizes[n], deltas[n])];
 		}
 		else {
 			deltas[site] += 1;
 			deltas[n] += 2;
-			transitionRates[site] = transitionsTable[expIndex(neighbors.size(), deltas[site])];
-			transitionRates[n] = transitionsTable[expIndex(Topology::kernelSizes[n], deltas[n])];
 		}
+		// site 'n' have its delta changed exaclty one time, because only 'site'
+		// transitioned and 'n' retains its state
+		transitionRates[n] = transitionsTable[expIndex(Topology::kernelSizes[n], deltas[n])];
 	}
-}
-
-double Lattice::getOrderParameter()
-{
-	// calculate the order parameter for the current state
-	return sqrt((double) N0*N0 + N1*N1 + N2*N2 - N1*N2 - N0*N1 - N0*N2)/N;
-}
-
-void Lattice::print()
-{
-	std::cout << "states: ";
-	for(const auto& s : states) std::cout << s << " ";
-	std::cout << std::endl;
-	
-	std::cout << "populations: " << N0 << " " << N1 << " " << N2 << std::endl;
-	std::cout << "min/max neighbors: " << minNeighbors << "," << maxNeighbors << std::endl;
-
-	std::cout << "deltas: ";
-	for(const auto& d : deltas) std::cout << d << " ";
-	std::cout << std::endl;
-
-	std::cout << "transition rates: ";
-	for(const auto& g : transitionRates) std::cout << g << " ";
-	std::cout << std::endl;
+	// 'site' has its delta changed a number of times equal to its kernelSize
+	transitionRates[site] = transitionsTable[expIndex(neighbors.size(), deltas[site])];
 }
 
 void Lattice::calculateTransitionsTable()
@@ -163,5 +160,29 @@ int Lattice::expIndex(int k, int dk)
 		throw std::runtime_error("accessing index out of bounds in expTable");
 	}
 	return (k - minNeighbors) * (minNeighbors + k) + (k + dk);
+}
+
+double Lattice::getOrderParameter()
+{
+	// calculate the order parameter for the current state
+	return sqrt((double) N0*N0 + N1*N1 + N2*N2 - N1*N2 - N0*N1 - N0*N2)/N;
+}
+
+void Lattice::print()
+{
+	std::cout << "states: ";
+	for(const auto& s : states) std::cout << s << " ";
+	std::cout << std::endl;
+	
+	std::cout << "populations: " << N0 << " " << N1 << " " << N2 << std::endl;
+	std::cout << "min/max neighbors: " << minNeighbors << "," << maxNeighbors << std::endl;
+
+	std::cout << "deltas: ";
+	for(const auto& d : deltas) std::cout << d << " ";
+	std::cout << std::endl;
+
+	std::cout << "transition rates: ";
+	for(const auto& g : transitionRates) std::cout << g << " ";
+	std::cout << std::endl;
 }
 
