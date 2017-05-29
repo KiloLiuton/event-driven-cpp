@@ -15,8 +15,12 @@ public:
 	Lattice(int, int, double, double, pcg64&);
 
 	double getOrderParameter();
+	int getPop(short int);
+	void step();
 	void setCouplingStrength(double);
 	void print();
+	void printStates();
+
 private:
 	std::vector<short int> states;
 	std::vector<int> deltas;

@@ -28,33 +28,39 @@ int main(int argc, char *argv[]) {
 	// seed rng
 	pcg64 rng(42u, 54u);
 	if(non_deterministic_seed) rng.seed(pcg_extras::seed_seq_from<std::random_device>());
-	std::uniform_real_distribution<double> uniform(0,1);
 
 	// create a lattice instance
 	Lattice lattice(10,3,1.5,0.0,rng);
-	double r = lattice.getOrderParameter();
+
+	std::cout << "\ninitial condition\n";
 	lattice.print();
-	std::cout << "r = " << r << std::endl;
+
+	lattice.step();
+	std::cout << "\nafter 1 step\n";
+	lattice.print();
+
+	lattice.setCouplingStrength(1.8);
+	std::cout << "\nafter setting a=1.8\n";
+	lattice.print();
+
+	lattice.step();
+	std::cout << "\nafter another step\n";
+	lattice.print();
+
+	for(int i = 0; i < 50; ++i) {
+		lattice.step();
+		lattice.printStates();
+	}
+
+	std::cout << "\nafter 50 steps\n";
+	lattice.print();
 
 	// get neighbors of site 0
-	std::vector<int> foo = lattice.getNeighbors(0);
+	std::vector<int> foo = lattice.Topology::getNeighbors(0);
 	for(const auto& x : foo) std::cout << x << " ";
 	std::cout << std::endl;
 
 	lattice.printTopology();
-
-	// rng test
-	int a = 6;
-	A myClass(a, rng);
-	std::cout << "myClass rolls: ";
-	pcg64 rng2 = rng; // make a copy of state before rolls
-	for(int i = 0; i < 10; ++i) std::cout << myClass.roll() << " ";
-	std::cout << std::endl;
-	std::cout << "global rolls: ";
-	for(int i = 0; i < 10; ++i) std::cout << rng2(6) << " ";
-	std::cout << std::endl;
-
-	std::cout << exp(1.5*2/4) << std::endl;
 
 	return 0;
 }

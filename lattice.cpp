@@ -188,6 +188,25 @@ double Lattice::getOrderParameter()
 	return sqrt((double) N0*N0 + N1*N1 + N2*N2 - N1*N2 - N0*N1 - N0*N2)/N;
 }
 
+void Lattice::step()
+{
+	int event = chooseEvent();
+	transitionSite(event);
+}
+
+int Lattice::getPop(short int state)
+{
+	switch(state) {
+		case 0:
+			return N0;
+		case 1:
+			return N1;
+		case 2:
+			return N2;
+	}
+	throw std::runtime_error("invalid state queried at 'getPop'");
+}
+
 void Lattice::print()
 {
 	std::cout << "states: ";
@@ -204,5 +223,12 @@ void Lattice::print()
 	std::cout << "transition rates: ";
 	for(const auto& g : transitionRates) std::cout << g << " ";
 	std::cout << std::endl;
+
+	std::cout << "r = " << getOrderParameter() << std::endl;
 }
 
+void Lattice::printStates()
+{
+	for(auto s : states) std::cout << s << " ";
+	std::cout << std::endl;
+}
