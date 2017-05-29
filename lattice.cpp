@@ -5,22 +5,24 @@
 #include "lattice.h"
 #include "topology.h"
 
-Lattice::Lattice(int N, int k, double a, double p, pcg64& rng) : Topology(N,k,p), rng(rng), uniform(0.0,1.0)
+Lattice::Lattice(int N, int k, double couplingStrength, double rewireProb, pcg64& rng) : Topology(N,k,rewireProb), rng(rng), uniform(0.0,1.0)
 {
 	// set lattice size N, k, and topology at initialization
 	this->N = N;
 	this->k = k;
-	this->a = a;
-	this->p = p;
+	this->couplingStrength = couplingStrength;
+	this->rewireProb = rewireProb;
 	this->totalRate = 0;
 
 	states.resize(N);
 	transitionRates.resize(N);
 	deltas.resize(N);
+	transitionsTable.resize((Topology::maxNeighbors + Topology::minNeighbors + 1) * (Topology::maxNeighbors - Topology::minNeighbors + 1));
 
 	initializeStates();
 	calculateTransitionsTable();
-	initializeDeltasAndRates(); // also sets totalRate and transitionRates
+	initializeDeltas();
+	initializeRates(); // sets rates and totalRate
 }
 
 void Lattice::initializeStates()
@@ -47,15 +49,21 @@ void Lattice::initializeStates()
 	}
 }
 
-void Lattice::initializeDeltasAndRates()
+void Lattice::initializeDeltas()
 {
 	// get the delta value for each site and get its transition rate
 	for(int i = 0; i < N; ++i) {
 		std::vector<int> neighbors = Topology::getNeighbors(i);
 		int delta = getSiteDelta(i);
 		deltas[i] = delta;
-		// update the corresponding transition rate
-		double g = transitionsTable[expIndex(neighbors.size(), delta)];
+	}
+}
+
+void Lattice::initializeRates()
+{
+	totalRate = 0;
+	for(int i = 0; i < N; ++i) {
+		double g = transitionsTable[expIndex(Topology::kernelSizes[i], deltas[i])];
 		transitionRates[i] = g;
 		totalRate += g;
 	}
@@ -131,10 +139,16 @@ void Lattice::transitionSite(int site)
 		}
 		// site 'n' have its delta changed exaclty one time, because only 'site'
 		// transitioned and 'n' retains its state
-		transitionRates[n] = transitionsTable[expIndex(Topology::kernelSizes[n], deltas[n])];
+		totalRate -= transitionRates[n];
+		double newRate = transitionsTable[expIndex(Topology::kernelSizes[n], deltas[n])];
+		transitionRates[n] = newRate;
+		totalRate += newRate;
 	}
 	// 'site' has its delta changed a number of times equal to its kernelSize
-	transitionRates[site] = transitionsTable[expIndex(neighbors.size(), deltas[site])];
+	totalRate -= transitionRates[site];
+	double newRate = transitionsTable[expIndex(neighbors.size(), deltas[site])];
+	transitionRates[site] = newRate;
+	totalRate += newRate;
 }
 
 void Lattice::calculateTransitionsTable()
@@ -143,11 +157,10 @@ void Lattice::calculateTransitionsTable()
 	// if there are too many transitions it might be faster to compute the transition as required.
 	// transition rate: g = exp[a*(Knext - Ksame)/K]
 	// number of possible transitions: (kmax + kmin + 1)*(kmax - kmin + 1)
-	transitionsTable.resize((maxNeighbors + minNeighbors + 1) * (maxNeighbors - minNeighbors + 1));
 	int i = 0;
 	for(int k = minNeighbors; k < maxNeighbors + 1; ++k) {
 		for(int ki = -k; ki <= k; ++ki) {
-			transitionsTable[i] = exp(a*ki/k);
+			transitionsTable[i] = exp(couplingStrength*ki/k);
 			++i;
 		}
 	}
@@ -160,6 +173,13 @@ int Lattice::expIndex(int k, int dk)
 		throw std::runtime_error("accessing index out of bounds in expTable");
 	}
 	return (k - minNeighbors) * (minNeighbors + k) + (k + dk);
+}
+
+void Lattice::setCouplingStrength(double a)
+{
+	this->couplingStrength = a;
+	calculateTransitionsTable();
+	initializeRates();
 }
 
 double Lattice::getOrderParameter()
