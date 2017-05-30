@@ -5,13 +5,10 @@
 #include "lattice.h"
 #include "topology.h"
 
-Lattice::Lattice(int N, int k, double couplingStrength, double rewireProb, pcg64& rng) : Topology(N,k,rewireProb), rng(rng), uniform(0.0,1.0)
+Lattice::Lattice(int N, int k, double p, double couplingStrength, pcg64& rng) : Topology(N,k,rewireProb), N(N), k(k), rewireProb(p), rng(rng), uniform(0.0,1.0)
 {
 	// set lattice size N, k, and topology at initialization
-	this->N = N;
-	this->k = k;
 	this->couplingStrength = couplingStrength;
-	this->rewireProb = rewireProb;
 	this->totalRate = 0;
 
 	states.resize(N);
@@ -168,7 +165,8 @@ void Lattice::calculateTransitionsTable()
 
 int Lattice::expIndex(int k, int dk)
 {
-	// return the one dimensional index with the value of exp(a*dk/k)
+	// use this function to get the correct value of the exponential for k and dk.
+	// return the one dimensional index with the value of exp(a*dk/k).
 	if(k > maxNeighbors || k < minNeighbors || dk > k || dk < -k) {
 		throw std::runtime_error("accessing index out of bounds in expTable");
 	}
@@ -188,10 +186,33 @@ double Lattice::getOrderParameter()
 	return sqrt((double) N0*N0 + N1*N1 + N2*N2 - N1*N2 - N0*N1 - N0*N2)/N;
 }
 
-void Lattice::step()
+double Lattice::step()
 {
+	// this function runs the model dynamics for one step. In the evet driven paradigm this
+	// means that one event will occur for every call of this function, regardless of the time
+	// elapsed.
+	// return value is the expected time this state will last until next transition.
 	int event = chooseEvent();
 	transitionSite(event);
+	double expectedTime = 1/totalRate;
+
+	return expectedTime;
+}
+
+void Lattice::reset()
+{
+	initializeStates();
+	initializeDeltas();
+	initializeRates();
+}
+
+void Lattice::resetToCoupling(double a)
+{
+	setCouplingStrength(a);
+	calculateTransitionsTable();
+	initializeStates();
+	initializeDeltas();
+	initializeRates();
 }
 
 int Lattice::getPop(short int state)
@@ -212,15 +233,16 @@ void Lattice::print()
 	std::cout << "states: ";
 	for(const auto& s : states) std::cout << s << " ";
 	std::cout << std::endl;
-	
-	std::cout << "populations: " << N0 << " " << N1 << " " << N2 << std::endl;
-	std::cout << "min/max neighbors: " << minNeighbors << "," << maxNeighbors << std::endl;
 
 	std::cout << "deltas: ";
 	for(const auto& d : deltas) std::cout << d << " ";
 	std::cout << std::endl;
+	
+	std::cout << "populations: " << N0 << " " << N1 << " " << N2 << std::endl;
+	std::cout << "min/max neighbors: " << minNeighbors << "," << maxNeighbors << std::endl;
 
 	std::cout << "transition rates: ";
+	std::cout.precision(3);
 	for(const auto& g : transitionRates) std::cout << g << " ";
 	std::cout << std::endl;
 
@@ -230,5 +252,9 @@ void Lattice::print()
 void Lattice::printStates()
 {
 	for(auto s : states) std::cout << s << " ";
-	std::cout << std::endl;
+}
+
+void Lattice::printPops()
+{
+	std::cout << N0 << " " << N1 << " " << N2;
 }

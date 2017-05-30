@@ -16,17 +16,22 @@ public:
 
 	double getOrderParameter();
 	int getPop(short int);
-	void step();
+	double step();
+	void reset();
+	void resetToCoupling(double);
 	void setCouplingStrength(double);
 	void print();
 	void printStates();
+	void printPops();
 
 private:
+	const int N, k; // size and neighbors
+	const double rewireProb; // rewire probability
 	std::vector<short int> states;
 	std::vector<int> deltas;
 	std::vector<double> transitionRates, transitionsTable;
-	double totalRate, rewireProb, couplingStrength;
-	int N, N0, N1, N2, k; // size, populations and half the number neighbors
+	double totalRate, couplingStrength;
+	int N0, N1, N2; // populations
 	pcg64& rng;
 	std::uniform_real_distribution<double> uniform;
 
