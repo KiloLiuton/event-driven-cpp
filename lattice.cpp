@@ -5,7 +5,7 @@
 #include "lattice.h"
 #include "topology.h"
 
-Lattice::Lattice(int N, int k, double p, double couplingStrength, pcg64& rng) : Topology(N,k,rewireProb), N(N), k(k), rewireProb(p), rng(rng), uniform(0.0,1.0)
+Lattice::Lattice(int N, int k, double p, double couplingStrength, pcg64& rng) : Topology(N,k,p), N(N), rng(rng), uniform(0.0,1.0)
 {
 	// set lattice size N, k, and topology at initialization
 	this->couplingStrength = couplingStrength;
@@ -155,7 +155,7 @@ void Lattice::calculateTransitionsTable()
 	// transition rate: g = exp[a*(Knext - Ksame)/K]
 	// number of possible transitions: (kmax + kmin + 1)*(kmax - kmin + 1)
 	int i = 0;
-	for(int k = minNeighbors; k < maxNeighbors + 1; ++k) {
+	for(int k = Topology::minNeighbors; k < Topology::maxNeighbors + 1; ++k) {
 		for(int ki = -k; ki <= k; ++ki) {
 			transitionsTable[i] = exp(couplingStrength*ki/k);
 			++i;
@@ -167,10 +167,10 @@ int Lattice::expIndex(int k, int dk)
 {
 	// use this function to get the correct value of the exponential for k and dk.
 	// return the one dimensional index with the value of exp(a*dk/k).
-	if(k > maxNeighbors || k < minNeighbors || dk > k || dk < -k) {
+	if(k > Topology::maxNeighbors || k < Topology::minNeighbors || dk > k || dk < -k) {
 		throw std::runtime_error("accessing index out of bounds in expTable");
 	}
-	return (k - minNeighbors) * (minNeighbors + k) + (k + dk);
+	return (k - Topology::minNeighbors) * (Topology::minNeighbors + k) + (k + dk);
 }
 
 void Lattice::setCouplingStrength(double a)
@@ -208,11 +208,9 @@ void Lattice::reset()
 
 void Lattice::resetToCoupling(double a)
 {
-	setCouplingStrength(a);
-	calculateTransitionsTable();
 	initializeStates();
 	initializeDeltas();
-	initializeRates();
+	setCouplingStrength(a);
 }
 
 int Lattice::getPop(short int state)
@@ -224,8 +222,9 @@ int Lattice::getPop(short int state)
 			return N1;
 		case 2:
 			return N2;
+		default:
+			throw std::runtime_error("invalid state queried at 'getPop'");
 	}
-	throw std::runtime_error("invalid state queried at 'getPop'");
 }
 
 void Lattice::print()
@@ -239,7 +238,7 @@ void Lattice::print()
 	std::cout << std::endl;
 	
 	std::cout << "populations: " << N0 << " " << N1 << " " << N2 << std::endl;
-	std::cout << "min/max neighbors: " << minNeighbors << "," << maxNeighbors << std::endl;
+	std::cout << "min/max neighbors: " << Topology::minNeighbors << "," << Topology::maxNeighbors << std::endl;
 
 	std::cout << "transition rates: ";
 	std::cout.precision(3);

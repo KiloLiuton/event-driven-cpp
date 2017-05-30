@@ -19,28 +19,34 @@ int main(int argc, char *argv[]) {
 	// define lattice parameters:
 	const int SIZE = 12;
 	const int K = 2;
-	const double REWIRE_PROBABILITY = 0.0; // FIXME : this is not implemented yet! only regular rings are created
+	const double REWIRE_PROBABILITY = 0.0; // TODO : this is not implemented yet! only regular rings are created
 	double couplingStrength = 1.6;
 
 	// create a lattice instance
 	Lattice lattice(SIZE, K, REWIRE_PROBABILITY, couplingStrength, rng);
 
-	// print topology and initial condition FIXME: (may bug if SIZE is too big)
+	// print topology and initial condition FIXME: (may print incorrectly if SIZE is too big)
 	lattice.printTopology();
 	std::cout << "\nINITIAL CONDITION\n";
 	lattice.print();
 
+	// set simulation parameters
+	const int ITERS = 2000;
+	const int TRIALS = 1;
+
 	// prepare output file
 	std::ostringstream oss;
-	oss << "N=" << SIZE << "k=" << K << "p=" << REWIRE_PROBABILITY << ".txt";
+	std::string dataPath ("data/");
+	oss << "N=" << SIZE << "k=" << K << "p=" << REWIRE_PROBABILITY << "ITERS=" << ITERS << "TRIALS=" << TRIALS << ".txt";
 	std::string filename = oss.str();
 
-	std::ofstream myfile (filename);
-	if(!myfile.is_open()) throw std::runtime_error("failed to open file");
+	std::ofstream orderParameterFile (dataPath + filename);
+	if(!orderParameterFile.is_open()) throw std::runtime_error("failed to open file");
 
-	myfile << lattice.getOrderParameter() << std::endl;
+	// run system dynamics
+	orderParameterFile << lattice.getOrderParameter() << std::endl;
 	lattice.step();
-	myfile << lattice.getOrderParameter() << std::endl;
+	orderParameterFile << lattice.getOrderParameter() << std::endl;
 
 	return 0;
 }

@@ -25,8 +25,7 @@ public:
 	void printPops();
 
 private:
-	const int N, k; // size and neighbors
-	const double rewireProb; // rewire probability
+	const int N; // size and neighbors
 	std::vector<short int> states;
 	std::vector<int> deltas;
 	std::vector<double> transitionRates, transitionsTable;
