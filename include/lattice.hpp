@@ -6,7 +6,7 @@
 #include <random>
 
 #include "pcg_random.hpp"
-#include "topology.h"
+#include "topology.hpp"
 
 class Lattice : public Topology {
 public:

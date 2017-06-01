@@ -6,12 +6,13 @@ OBJ_PATH = obj
 _OBJ = topology.o lattice.o main.o
 OBJ = $(patsubst %, $(OBJ_PATH)/%, $(_OBJ))
 
-PCG_INCLUDE_PATH = include
+INCLUDE_PATH = ../include
 
-DEPS = topology.h lattice.h $(PCG_INCLUDE_PATH)/*.hpp
+# include all .hpp headers in ../include folder
+DEPS = $(INCLUDE_PATH)/*.hpp
 
 LIBS = -lm
-CFLAGS = -Wall -I $(PCG_INCLUDE_PATH) -std=c++11
+CFLAGS = -Wall -I $(INCLUDE_PATH) -std=c++11
 
 # make objects
 $(OBJ_PATH)/%.o : %.cpp $(DEPS)
@@ -21,13 +22,10 @@ $(OBJ_PATH)/%.o : %.cpp $(DEPS)
 $(PROG_NAME) : $(OBJ)
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
-.PHONY : test clean cleanData
+.PHONY : test clean
 
 test :
 	./$(PROG_NAME)
 
 clean :
 	rm -f $(PROG_NAME) $(OBJ_PATH)/*.o
-
-cleanData :
-	rm -f data/*.txt

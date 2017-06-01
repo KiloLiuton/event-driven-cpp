@@ -2,8 +2,8 @@
 #include <math.h>
 
 #include "pcg_random.hpp"
-#include "lattice.h"
-#include "topology.h"
+#include "lattice.hpp"
+#include "topology.hpp"
 
 Lattice::Lattice(int N, int k, double p, double couplingStrength, pcg64& rng) : Topology(N,k,p), N(N), rng(rng), uniform(0.0,1.0)
 {

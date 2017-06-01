@@ -2,7 +2,7 @@
 #include <math.h>
 
 #include "pcg_random.hpp"
-#include "topology.h"
+#include "topology.hpp"
 
 Topology::Topology(int N, int k, double p)
 {

@@ -1,12 +1,13 @@
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <random>
 #include <string>
 #include <sstream>
 
 #include "pcg_random.hpp"
-#include "topology.h"
-#include "lattice.h"
+#include "topology.hpp"
+#include "lattice.hpp"
 
 #define non_deterministic_seed true
 
@@ -16,7 +17,7 @@ int main(int argc, char *argv[]) {
 	// any changes regarding topology should be done by creating a new lattice instance.
 	const int SIZE = 201;
 	const int K = 100;
-	const double REWIRE_PROBABILITY = 0.0; // TODO : this is not implemented yet! only regular rings are created
+	const double REWIRE_PROB = 0.0; // TODO : this is not implemented yet! only create regular rings
 	double couplingStrength = 2.0;
 
 	// set simulation parameters
@@ -25,24 +26,26 @@ int main(int argc, char *argv[]) {
 
 	// prepare output filenames and open them
 	std::ostringstream oss;
-	oss << "relaxation-" << "N=" << SIZE << "k=" << K << "p=" << REWIRE_PROBABILITY << "a=" << REWIRE_PROBABILITY << ".txt";
+	oss << "relaxation-" << "N=" << SIZE << "k=" << K << "p=" << REWIRE_PROB
+		<< "a=" << REWIRE_PROB << ".txt";
 	std::string relaxationFilename = oss.str();
 	oss.str("");
-	oss << "rvsa-" << "N=" << SIZE << "k=" << K << "p=" << REWIRE_PROBABILITY << ".txt";
+	oss << "rvsa-" << "N=" << SIZE << "k=" << K << "p=" << REWIRE_PROB << ".txt";
 	std::string rvsaFilename = oss.str();
-	std::string relaxationDataPath ("relaxationData/"); // folder name for relaxation data
-	std::string rvsaDataPath ("rvsaData/"); // folder name for rvsa data
-	std::ofstream relaxationFile (relaxationDataPath + relaxationFilename);
-	std::ofstream rvsaFile (rvsaDataPath + rvsaFilename);
-	if(!relaxationFile.is_open()) throw std::runtime_error("failed to open relaxation file. Make sure 'relaxationData' folder exists.");
-	if(!rvsaFile.is_open()) throw std::runtime_error("failed to open rvsa file. Make sure 'rvsaData' folder exists.");
+
+	std::ofstream relaxationFile ("../relaxationData/" + relaxationFilename);
+	std::ofstream rvsaFile ("../rvsaData/" + rvsaFilename);
+	if(!relaxationFile.is_open())
+		throw std::runtime_error("failed to open relaxation file. Make sure 'relaxationData' folder exists.");
+	if(!rvsaFile.is_open())
+		throw std::runtime_error("failed to open rvsa file. Make sure 'rvsaData' folder exists.");
 
 	// seed rng
 	pcg64 rng(42u, 54u);
 	if(non_deterministic_seed) rng.seed(pcg_extras::seed_seq_from<std::random_device>());
 
 	// CREATE LATTICE INSTANCE
-	Lattice lattice(SIZE, K, REWIRE_PROBABILITY, couplingStrength, rng);
+	Lattice lattice(SIZE, K, REWIRE_PROB, couplingStrength, rng);
 
 	// print topology and initial condition FIXME: (may print incorrectly if SIZE is too big)
 	/*
@@ -71,11 +74,13 @@ int main(int argc, char *argv[]) {
 	}
 
 	// write rvsa header
-	rvsaFile << "relaxationPeriod=" << relaxationPeriod << "\tpointsAfterRelaxation=" << pointsAfterRelaxation << std::endl;
+	rvsaFile << "relaxationPeriod=" << relaxationPeriod
+	         << "\tpointsAfterRelaxation=" << pointsAfterRelaxation << std::endl;
 	rvsaFile << "a\t<<r>>\tX=<<r2>> - <<r>>2\n";
+
 	// begin coupling strength set
-	for(const auto& a : aRange) {
-		lattice.setCouplingStrength(a);
+	for(int a = 0; a < aRange.size(); ++a) {
+		lattice.setCouplingStrength(aRange[a]);
 		double rAvgSum = 0;
 		double r2AvgSum = 0;
 		for(size_t j = 0; j < TRIALS; ++j) { // run TRIALS trials for each coupling strength
@@ -99,8 +104,9 @@ int main(int argc, char *argv[]) {
 		double rAvgAvg = rAvgSum/TRIALS;
 		double r2AvgAvg = r2AvgSum/TRIALS;
 		double X = r2AvgAvg - rAvgAvg*rAvgAvg;
-		std::cout << a << " finished with " << "<r>2 = " << rAvgAvg*rAvgAvg << "\t<r2> = " << r2AvgAvg << std::endl;
-		rvsaFile << a << "\t" << rAvgAvg << "\t" << X << std::endl;
+		std::cout << aRange[a] << " finished\t" << "[" << a+1 << "/" << numPoints << "]\n";
+		rvsaFile << std::fixed << std::setprecision(10)
+		         << aRange[a] << "\t" << rAvgAvg << "\t" << X << std::endl;
 	}
 
 	return 0;
