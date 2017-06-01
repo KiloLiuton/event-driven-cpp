@@ -17,28 +17,24 @@ int main(int argc, char *argv[]) {
 	const int SIZE = 201;
 	const int K = 100;
 	const double REWIRE_PROBABILITY = 0.0; // TODO : this is not implemented yet! only regular rings are created
-	double couplingStrength = 1.6;
+	double couplingStrength = 2.0;
 
 	// set simulation parameters
 	const size_t ITERS = 50000; // maximum amount of iterations in case system takes too long to relax
 	const size_t TRIALS = 10; // number of independent runs for each 'couplingStrength' value
 
-	// prepare output filenames
+	// prepare output filenames and open them
 	std::ostringstream oss;
-	oss << "relaxation-" << "N=" << SIZE << "k=" << K << "p=" << REWIRE_PROBABILITY << ".txt";
+	oss << "relaxation-" << "N=" << SIZE << "k=" << K << "p=" << REWIRE_PROBABILITY << "a=" << REWIRE_PROBABILITY << ".txt";
 	std::string relaxationFilename = oss.str();
-
 	oss.str("");
 	oss << "rvsa-" << "N=" << SIZE << "k=" << K << "p=" << REWIRE_PROBABILITY << ".txt";
 	std::string rvsaFilename = oss.str();
-
-	// set file paths and open files
 	std::string relaxationDataPath ("relaxationData/"); // folder name for relaxation data
 	std::string rvsaDataPath ("rvsaData/"); // folder name for rvsa data
-
 	std::ofstream relaxationFile (relaxationDataPath + relaxationFilename);
-	if(!relaxationFile.is_open()) throw std::runtime_error("failed to open relaxation file. Make sure 'relaxationData' folder exists.");
 	std::ofstream rvsaFile (rvsaDataPath + rvsaFilename);
+	if(!relaxationFile.is_open()) throw std::runtime_error("failed to open relaxation file. Make sure 'relaxationData' folder exists.");
 	if(!rvsaFile.is_open()) throw std::runtime_error("failed to open rvsa file. Make sure 'rvsaData' folder exists.");
 
 	// seed rng
