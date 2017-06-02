@@ -9,7 +9,7 @@
 #include "topology.hpp"
 #include "lattice.hpp"
 
-#define non_deterministic_seed true
+#define NON_DETERMINISTIC_SEED true
 
 int main(int argc, char *argv[]) {
 
@@ -21,20 +21,31 @@ int main(int argc, char *argv[]) {
 	double couplingStrength = 2.0;
 
 	// set simulation parameters
-	const size_t ITERS = 50000; // maximum amount of iterations in case system takes too long to relax
-	const size_t TRIALS = 10; // number of independent runs for each 'couplingStrength' value
+	const size_t ITERS = 20000; // maximum amount of iterations in case system takes too long to relax
+	const size_t TRIALS = 300; // number of independent runs for each 'couplingStrength' value
 
-	// prepare output filenames and open them
+	// paths to data storage folders
+	std::string rvsaData ("../rvsaData/");
+	std::string relaxationData ("../relaxationData/");
+
+	// create relaxation&rvsa filenames. If either exists, append a '*' to its name
 	std::ostringstream oss;
 	oss << "relaxation-" << "N=" << SIZE << "k=" << K << "p=" << REWIRE_PROB
-		<< "a=" << REWIRE_PROB << ".txt";
+		<< "a=" << std::setprecision(2) << couplingStrength << ".txt";
 	std::string relaxationFilename = oss.str();
+	while(std::ifstream(relaxationData + relaxationFilename)) {
+		relaxationFilename = relaxationFilename.substr(0, relaxationFilename.size()-4) + "+.txt";
+	}
 	oss.str("");
 	oss << "rvsa-" << "N=" << SIZE << "k=" << K << "p=" << REWIRE_PROB << ".txt";
 	std::string rvsaFilename = oss.str();
+	while(std::ifstream(rvsaData + rvsaFilename)) {
+		rvsaFilename = rvsaFilename.substr(0, rvsaFilename.size()-4) + "+.txt";
+	}
 
-	std::ofstream relaxationFile ("../relaxationData/" + relaxationFilename);
-	std::ofstream rvsaFile ("../rvsaData/" + rvsaFilename);
+	// open the new files for writing
+	std::ofstream relaxationFile (relaxationData + relaxationFilename);
+	std::ofstream rvsaFile (rvsaData + rvsaFilename);
 	if(!relaxationFile.is_open())
 		throw std::runtime_error("failed to open relaxation file. Make sure 'relaxationData' folder exists.");
 	if(!rvsaFile.is_open())
@@ -42,17 +53,14 @@ int main(int argc, char *argv[]) {
 
 	// seed rng
 	pcg64 rng(42u, 54u);
-	if(non_deterministic_seed) rng.seed(pcg_extras::seed_seq_from<std::random_device>());
+	if(NON_DETERMINISTIC_SEED) rng.seed(pcg_extras::seed_seq_from<std::random_device>());
 
 	// CREATE LATTICE INSTANCE
 	Lattice lattice(SIZE, K, REWIRE_PROB, couplingStrength, rng);
 
-	// print topology and initial condition FIXME: (may print incorrectly if SIZE is too big)
-	/*
-	lattice.printTopology();
-	std::cout << "\nINITIAL CONDITION\n";
-	lattice.print();
-	*/
+	// write relaxatoin header
+	relaxationFile << "# data used to determine relaxation period.\n"
+		           << "# dt\tr\n";
 
 	// relaxation run
 	for(size_t i = 0; i < ITERS; ++i) {
@@ -74,15 +82,16 @@ int main(int argc, char *argv[]) {
 	}
 
 	// write rvsa header
-	rvsaFile << "relaxationPeriod=" << relaxationPeriod
-	         << "\tpointsAfterRelaxation=" << pointsAfterRelaxation << std::endl;
-	rvsaFile << "a\t<<r>>\tX=<<r2>> - <<r>>2\n";
+	rvsaFile << "# TRIALS=" << TRIALS << "\trelaxationPeriod=" << relaxationPeriod
+	         << "\tpointsAfterRelaxation=" << pointsAfterRelaxation << std::endl
+			 << "# a" << "\t<<r>>" << "\tX=<<r2>>-<<r>>2\tX'=<<r>2>-<<r>>2\n";
 
 	// begin coupling strength set
-	for(int a = 0; a < aRange.size(); ++a) {
+	for(size_t a = 0; a < aRange.size(); ++a) {
 		lattice.setCouplingStrength(aRange[a]);
 		double rAvgSum = 0;
 		double r2AvgSum = 0;
+		double rAvg2Sum = 0;
 		for(size_t j = 0; j < TRIALS; ++j) { // run TRIALS trials for each coupling strength
 			double rSum = 0;
 			double r2Sum = 0;
@@ -92,21 +101,24 @@ int main(int argc, char *argv[]) {
 				double dt = lattice.step();
 				if(i >= relaxationPeriod) {
 					double r = lattice.getOrderParameter();
-					double r2 = r*r;
 					rSum += r*dt;
-					r2Sum += r2*dt;
+					r2Sum += r*r*dt;
 					dtSum += dt;
 				}
 			}
-			rAvgSum += rSum/dtSum;
-			r2AvgSum += r2Sum/dtSum;
+			double rTrialAvg = rSum / dtSum;
+			rAvgSum += rTrialAvg;
+			r2AvgSum += r2Sum / dtSum;
+			rAvg2Sum += rTrialAvg*rTrialAvg;
 		}
-		double rAvgAvg = rAvgSum/TRIALS;
-		double r2AvgAvg = r2AvgSum/TRIALS;
+		double rAvgAvg = rAvgSum / TRIALS;
+		double r2AvgAvg = r2AvgSum / TRIALS;
+		double rAvg2Avg = rAvg2Sum / TRIALS;
 		double X = r2AvgAvg - rAvgAvg*rAvgAvg;
+		double Xnew = rAvg2Avg - rAvgAvg*rAvgAvg;
 		std::cout << aRange[a] << " finished\t" << "[" << a+1 << "/" << numPoints << "]\n";
 		rvsaFile << std::fixed << std::setprecision(10)
-		         << aRange[a] << "\t" << rAvgAvg << "\t" << X << std::endl;
+		         << aRange[a] << "\t" << rAvgAvg << "\t" << X << "\t" << Xnew << std::endl;
 	}
 
 	return 0;

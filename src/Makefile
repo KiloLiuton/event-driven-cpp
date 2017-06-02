@@ -22,10 +22,13 @@ $(OBJ_PATH)/%.o : %.cpp $(DEPS)
 $(PROG_NAME) : $(OBJ)
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
-.PHONY : test clean
+.PHONY : test clean cleandata
 
 test :
 	./$(PROG_NAME)
 
 clean :
 	rm -f $(PROG_NAME) $(OBJ_PATH)/*.o
+
+cleandata :
+	rm ../rvsaData/* ../relaxationData/*
