@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
 	// define lattice parameters:
 	// any changes regarding topology should be done by creating a new lattice instance.
 	const int SIZE = 201;
-	const int K = 100;
+	const int K = 50;
 	const double REWIRE_PROB = 0.0; // TODO : this is not implemented yet! only create regular rings
 	double couplingStrength = 2.0;
 
@@ -31,13 +31,14 @@ int main(int argc, char *argv[]) {
 	// create relaxation&rvsa filenames. If either exists, append a '*' to its name
 	std::ostringstream oss;
 	oss << "relaxation-" << "N=" << SIZE << "k=" << K << "p=" << REWIRE_PROB
-		<< "a=" << std::setprecision(2) << couplingStrength << ".txt";
+		<< "a=" << couplingStrength << "TRIALS=" << TRIALS << ".txt";
 	std::string relaxationFilename = oss.str();
 	while(std::ifstream(relaxationData + relaxationFilename)) {
 		relaxationFilename = relaxationFilename.substr(0, relaxationFilename.size()-4) + "+.txt";
 	}
 	oss.str("");
-	oss << "rvsa-" << "N=" << SIZE << "k=" << K << "p=" << REWIRE_PROB << ".txt";
+	oss << "rvsa-" << "N=" << SIZE << "k=" << K << "p=" << REWIRE_PROB
+		<< "TRIALS=" << TRIALS << ".txt";
 	std::string rvsaFilename = oss.str();
 	while(std::ifstream(rvsaData + rvsaFilename)) {
 		rvsaFilename = rvsaFilename.substr(0, rvsaFilename.size()-4) + "+.txt";
