@@ -11,6 +11,10 @@
 
 #define NON_DETERMINISTIC_SEED true
 
+// TODO:
+// - monitor file changes with python script for real time plotting
+// - write a better README.md using the markdown language
+
 int main(int argc, char *argv[]) {
 
 	// define lattice parameters:
