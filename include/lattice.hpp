@@ -23,6 +23,7 @@ public:
 	void print();
 	void printStates();
 	void printPops();
+	size_t relaxationRun(int trail, double threshold, const size_t MAX_ITERS, std::ofstream& outputFile);
 
 private:
 	const int N; // size and neighbors

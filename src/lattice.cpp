@@ -1,5 +1,8 @@
 #include <iostream>
 #include <math.h>
+#include <fstream>
+#include <algorithm>
+
 
 #include "pcg_random.hpp"
 #include "lattice.hpp"
@@ -225,6 +228,54 @@ int Lattice::getPop(short int state)
 		default:
 			throw std::runtime_error("invalid state queried at 'getPop'");
 	}
+}
+
+size_t Lattice::relaxationRun(int trail, double threshold, const size_t MAX_ITERS, std::ofstream& file)
+{
+	// run a single trial to determine relaxation. Relaxation is found when
+	//    the average order parameter doesn't change more than threshold
+	//    for trail steps.
+
+	// start by running 'trail' steps and storing the 'r' values.
+	double highestAvg = 0; // minimum value of r is 0
+	double lowestAvg = 1; // maximum value of r is 1
+	std::vector<double> trackR(trail);
+	size_t relaxationPeriod = 1;
+	trackR[0] = getOrderParameter();
+	for(int i = 1; i < trail; ++i) {
+		++relaxationPeriod;
+		double dt = step();
+		double r = getOrderParameter();
+		trackR[i] = r;
+
+		file << dt << "\t" << r << std::endl;
+	}
+	double avg = std::accumulate(trackR.begin(), trackR.end(), 0) / trackR.size();
+	highestAvg = std::max(highestAvg, avg);
+	lowestAvg = std::min(lowestAvg, avg);
+
+	// for each next step, check if the new average is close to the previous and,
+	//     if true, increment 'count', else set it to 0.
+	// if the new average is close for 'trail' consecutive steps, break.
+	int count = 0;
+	for(int i = trail; i < MAX_ITERS; ++i) {
+		++relaxationPeriod;
+		double dt = step();
+		double r = getOrderParameter();
+		double nextAvg = avg + (r - trackR[0]) / trail;
+		trackR.erase(trackR.begin());
+		trackR.push_back(r);
+		if(std::fabs(avg - nextAvg) < threshold) ++count;
+		else count = 0;
+		if(count > trail) break;
+		avg = nextAvg;
+		highestAvg = std::max(highestAvg, avg);
+		lowestAvg = std::min(lowestAvg, avg);
+
+		file << dt << "\t" << r << "\t" << getPop(0) << "\t" << getPop(1) << std::endl;
+	}
+
+	return relaxationPeriod;
 }
 
 void Lattice::print()

@@ -65,17 +65,12 @@ int main(int argc, char *argv[]) {
 
 	// write relaxatoin header
 	relaxationFile << "# data used to determine relaxation period.\n"
-		           << "# dt\tr\n";
+		           << "# dt\tr\tN0\tN1\n";
 
 	// relaxation run
-	for(size_t i = 0; i < ITERS; ++i) {
-		double dt = lattice.step();
-		double r = lattice.getOrderParameter();
-		relaxationFile << dt << "\t" << r << std::endl;
-	}
-
-	// FIXME: detect relaxation and set relaxationPeriod and pointsAfterRelaxation to sensible values
-	size_t relaxationPeriod = 0;
+	// FIXME: if the average value of the order parameter in the last N/2 steps hasn't changed
+	// more than some threshold, break the loop and set relaxationPeriod to the step number.
+	size_t relaxationPeriod = lattice.relaxationRun(100, 666, ITERS, relaxationFile);
 	size_t pointsAfterRelaxation = 666666666666;
 
 	// r vs a run
