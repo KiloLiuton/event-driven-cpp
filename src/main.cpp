@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
 	const int SIZE = 201;
 	const int K = 50;
 	const double REWIRE_PROB = 0.0; // TODO : this is not implemented yet! only create regular rings
-	double couplingStrength = 2.0;
+	double couplingStrength = 1.3;
 
 	// set simulation parameters
 	const size_t MAX_ITERS = 20000; // maximum amount of iterations in case system takes too long to relax
@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
 	std::string rvsaData ("../rvsaData/");
 	std::string relaxationData ("../relaxationData/");
 
-	// create relaxation&rvsa filenames. If either exists, append a '*' to its name
+	// create relaxation&rvsa filenames. If either exists, append a '+' to its name
 	std::ostringstream oss;
 	oss << "relaxation-" << "N=" << SIZE << "k=" << K << "p=" << REWIRE_PROB
 		<< "a=" << couplingStrength << "TRIALS=" << TRIALS << ".txt";
@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
 	if(NON_DETERMINISTIC_SEED) rng.seed(pcg_extras::seed_seq_from<std::random_device>());
 
 	// CREATE LATTICE INSTANCE
-	Lattice lattice(SIZE, K, REWIRE_PROB, couplingStrength, rng);
+	Lattice simulation(SIZE, K, REWIRE_PROB, couplingStrength, rng);
 
 	// write relaxatoin header
 	relaxationFile << "# data used to determine relaxation period.\n"
@@ -73,9 +73,12 @@ int main(int argc, char *argv[]) {
 	//		   If the average of the new block is less than 'threshold' of the average of the first block,
 	//		   increment a cout value. If this count value reaches a size equal to trail, break the loop and
 	//		   return the current value of steps.
+	// TODO: simulation run currently ignores any values found by the relaxation period step. Implement
+	//       this after the relaxation period has been fixed.
 	//
-	// size_t relaxationRun(trail, threshold, MAX_ITERS, outputfile);
-	size_t relaxationPeriod = lattice.relaxationRun(100, 666, MAX_ITERS, relaxationFile); // threshold > 1 ensures it will run for MAX_ITERS
+	// size_t relaxationRun(trail, threshold, MAX_ITERS, outputfile) threshold>1.0 ensures it runs for MAX_ITERS
+	//     the order parameter, step duration and populations are recorded in outputfile for every step.
+	size_t relaxationPeriod = simulation.relaxationRun(100, 2.0, MAX_ITERS, relaxationFile);
 	size_t pointsAfterRelaxation = 666666666666;
 
 	// r vs a run
@@ -83,21 +86,22 @@ int main(int argc, char *argv[]) {
 	int numPoints = 20;
 	double initialCoupling = 1.3, finalCoupling = 3.6;
 	std::vector<double> aRange (numPoints);
-	for(int i = 0; i < numPoints; ++i) {
-		aRange[i] = initialCoupling + i * (finalCoupling - initialCoupling) / numPoints;
-	}
+	for(int i=0; i<numPoints; ++i) aRange[i] = initialCoupling + i*(finalCoupling - initialCoupling)/numPoints;
 
-	// write rvsa header
+	// write rvsa header (order parameter r vs coupling strength a)
 	rvsaFile << "# TRIALS=" << TRIALS << "\trelaxationPeriod=" << relaxationPeriod
 	         << "\tpointsAfterRelaxation=" << pointsAfterRelaxation << std::endl
 			 << "# a" << "\t<<r>>" << "\tX=<<r2>>-<<r>>2\tX'=<<r>2>-<<r>>2\n";
 
-	// TODO: isolate trial run into function in lattice.cpp: "double Lattice::runTrial(MAX_ITERS, relaxationPeriod, pointsAfterRelaxation);" that returns <r>
+	// TODO: isolate trial-run into it's own function in lattice.cpp (to simplify the nested loops):
+	//       double Lattice::runTrial(MAX_ITERS, relaxationPeriod, pointsAfterRelaxation);
+	//       that returns <r>
+	//
 	// outer loop: set coupling strength
 	//     middle loop: start a trial
 	//         inner loop: run a single trial for MAX_ITERS steps at most
 	for(size_t a = 0; a < aRange.size(); ++a) {
-		lattice.setCouplingStrength(aRange[a]);
+		simulation.setCouplingStrength(aRange[a]);
 		double rAvgSum = 0;
 		double r2AvgSum = 0;
 		double rAvg2Sum = 0;
@@ -105,15 +109,14 @@ int main(int argc, char *argv[]) {
 			double rSum = 0;
 			double r2Sum = 0;
 			double dtSum = 0;
-			// each trial consists of 'MAX_ITERS' steps at most, and the first 'relaxationPeriod' steps are discarded
-			for(size_t i = 0; i < MAX_ITERS && i < relaxationPeriod + pointsAfterRelaxation; ++i) {
-				double dt = lattice.step();
-				if(i >= relaxationPeriod) {
-					double r = lattice.getOrderParameter();
-					rSum += r*dt;
-					r2Sum += r*r*dt;
-					dtSum += dt;
-				}
+
+			// each trial consist of 'MAX_ITERS' steps at most, and the first 'relaxationPeriod' steps are discarded
+			for(size_t i = 0; i < MAX_ITERS; ++i) {
+				double dt = simulation.step();
+				double r = simulation.getOrderParameter();
+				rSum += r*dt;
+				r2Sum += r*r*dt;
+				dtSum += dt;
 			}
 			double rAvg = rSum / dtSum;
 			double r2Avg = r2Sum / dtSum;

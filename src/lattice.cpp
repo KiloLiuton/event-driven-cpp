@@ -96,7 +96,7 @@ int Lattice::chooseEvent()
 		partialRate += g;
 		if(randomRate < partialRate) return event;
 	}
-	throw std::runtime_error("no valid event chosen at function's 'chooseEvent' end");
+	throw std::runtime_error("no valid event chosen at function 'chooseEvent's end");
 }
 
 void Lattice::transitionSite(int site)
