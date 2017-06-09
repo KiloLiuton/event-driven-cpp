@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
 	double couplingStrength = 2.0;
 
 	// set simulation parameters
-	const size_t ITERS = 20000; // maximum amount of iterations in case system takes too long to relax
+	const size_t MAX_ITERS = 20000; // maximum amount of iterations in case system takes too long to relax
 	const size_t TRIALS = 300; // number of independent runs for each 'couplingStrength' value
 
 	// paths to data storage folders
@@ -67,13 +67,19 @@ int main(int argc, char *argv[]) {
 	relaxationFile << "# data used to determine relaxation period.\n"
 		           << "# dt\tr\tN0\tN1\n";
 
-	// relaxation run
-	// FIXME: if the average value of the order parameter in the last N/2 steps hasn't changed
-	// more than some threshold, break the loop and set relaxationPeriod to the step number.
-	size_t relaxationPeriod = lattice.relaxationRun(100, 666, ITERS, relaxationFile);
+	// FIXME: This function might not be the best solution to detecting relaxation.
+	//	   This function gets the average of the order parameter for a block of 'trail' events. The next block
+	//		   is obtained by shifting the block one event (discard the first event and include the next).
+	//		   If the average of the new block is less than 'threshold' of the average of the first block,
+	//		   increment a cout value. If this count value reaches a size equal to trail, break the loop and
+	//		   return the current value of steps.
+	//
+	// size_t relaxationRun(trail, threshold, MAX_ITERS, outputfile);
+	size_t relaxationPeriod = lattice.relaxationRun(100, 666, MAX_ITERS, relaxationFile); // threshold > 1 ensures it will run for MAX_ITERS
 	size_t pointsAfterRelaxation = 666666666666;
 
 	// r vs a run
+	// start by creating a vector with the coupling strength values
 	int numPoints = 20;
 	double initialCoupling = 1.3, finalCoupling = 3.6;
 	std::vector<double> aRange (numPoints);
@@ -86,7 +92,10 @@ int main(int argc, char *argv[]) {
 	         << "\tpointsAfterRelaxation=" << pointsAfterRelaxation << std::endl
 			 << "# a" << "\t<<r>>" << "\tX=<<r2>>-<<r>>2\tX'=<<r>2>-<<r>>2\n";
 
-	// begin coupling strength set
+	// TODO: isolate trial run into function in lattice.cpp: "double Lattice::runTrial(MAX_ITERS, relaxationPeriod, pointsAfterRelaxation);" that returns <r>
+	// outer loop: set coupling strength
+	//     middle loop: start a trial
+	//         inner loop: run a single trial for MAX_ITERS steps at most
 	for(size_t a = 0; a < aRange.size(); ++a) {
 		lattice.setCouplingStrength(aRange[a]);
 		double rAvgSum = 0;
@@ -96,8 +105,8 @@ int main(int argc, char *argv[]) {
 			double rSum = 0;
 			double r2Sum = 0;
 			double dtSum = 0;
-			// each trial consists of 'ITERS' steps at most, and the first 'relaxationPeriod' steps are discarded
-			for(size_t i = 0; i < ITERS && i < relaxationPeriod + pointsAfterRelaxation; ++i) {
+			// each trial consists of 'MAX_ITERS' steps at most, and the first 'relaxationPeriod' steps are discarded
+			for(size_t i = 0; i < MAX_ITERS && i < relaxationPeriod + pointsAfterRelaxation; ++i) {
 				double dt = lattice.step();
 				if(i >= relaxationPeriod) {
 					double r = lattice.getOrderParameter();
@@ -106,18 +115,21 @@ int main(int argc, char *argv[]) {
 					dtSum += dt;
 				}
 			}
-			double rTrialAvg = rSum / dtSum;
-			rAvgSum += rTrialAvg;
-			r2AvgSum += r2Sum / dtSum;
-			rAvg2Sum += rTrialAvg*rTrialAvg;
+			double rAvg = rSum / dtSum;
+			double r2Avg = r2Sum / dtSum;
+
+			rAvgSum += rAvg;
+			r2AvgSum += r2Avg;
+			rAvg2Sum += rAvg*rAvg;
 		}
-		double rAvgAvg = rAvgSum / TRIALS;
-		double r2AvgAvg = r2AvgSum / TRIALS;
-		double rAvg2Avg = rAvg2Sum / TRIALS;
-		double X = r2AvgAvg - rAvgAvg*rAvgAvg;
-		double Xnew = rAvg2Avg - rAvgAvg*rAvgAvg;
-		std::cout << aRange[a] << " finished\t" << "[" << a+1 << "/" << numPoints << "]\n";
-		rvsaFile << std::fixed << std::setprecision(10)
+		double rAvgAvg = rAvgSum / TRIALS;        // <<r>>
+		double r2AvgAvg = r2AvgSum / TRIALS;      // <<r^2>>
+		double rAvg2Avg = rAvg2Sum / TRIALS;      // <<r>^2>
+		double X = r2AvgAvg - rAvgAvg*rAvgAvg;    // <<r^2>> - <<r>>^2
+		double Xnew = rAvg2Avg - rAvgAvg*rAvgAvg; // <<r>^2> - <<r>>^2
+
+		std::cout << aRange[a] << " finished\t" << "[" << a+1 << "/" << numPoints << "]\n"; // track progress
+		rvsaFile << std::fixed << std::setprecision(12)
 		         << aRange[a] << "\t" << rAvgAvg << "\t" << X << "\t" << Xnew << std::endl;
 	}
 

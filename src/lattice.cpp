@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <math.h>
 #include <fstream>
 #include <algorithm>
@@ -237,8 +238,9 @@ size_t Lattice::relaxationRun(int trail, double threshold, const size_t MAX_ITER
 	//    for trail steps.
 
 	// start by running 'trail' steps and storing the 'r' values.
-	double highestAvg = 0; // minimum value of r is 0
-	double lowestAvg = 1; // maximum value of r is 1
+	double highestAvg = 0; // minimum possible value of r is 0
+	double lowestAvg = 1; // maximum possible value of r is 1
+	double totalTime = 0;
 	std::vector<double> trackR(trail);
 	size_t relaxationPeriod = 1;
 	trackR[0] = getOrderParameter();
@@ -247,32 +249,37 @@ size_t Lattice::relaxationRun(int trail, double threshold, const size_t MAX_ITER
 		double dt = step();
 		double r = getOrderParameter();
 		trackR[i] = r;
+		totalTime += dt;
 
-		file << dt << "\t" << r << std::endl;
+		file << std::fixed << std::setprecision(12)
+		     << totalTime << "\t" << r << std::endl;
 	}
+	// get average of the first block of 'trail' events
 	double avg = std::accumulate(trackR.begin(), trackR.end(), 0) / trackR.size();
 	highestAvg = std::max(highestAvg, avg);
 	lowestAvg = std::min(lowestAvg, avg);
 
-	// for each next step, check if the new average is close to the previous and,
-	//     if true, increment 'count', else set it to 0.
-	// if the new average is close for 'trail' consecutive steps, break.
+	// for each next step, check if the new average is in an interval of 'threshold'
+	//     around the previous average. If this happens 'trail' consecutive times, break.
 	int count = 0;
-	for(int i = trail; i < MAX_ITERS; ++i) {
+	for(size_t i = trail; i < MAX_ITERS; ++i) {
 		++relaxationPeriod;
 		double dt = step();
 		double r = getOrderParameter();
 		double nextAvg = avg + (r - trackR[0]) / trail;
 		trackR.erase(trackR.begin());
 		trackR.push_back(r);
+		totalTime += dt;
 		if(std::fabs(avg - nextAvg) < threshold) ++count;
 		else count = 0;
-		if(count > trail) break;
 		avg = nextAvg;
 		highestAvg = std::max(highestAvg, avg);
 		lowestAvg = std::min(lowestAvg, avg);
 
-		file << dt << "\t" << r << "\t" << getPop(0) << "\t" << getPop(1) << std::endl;
+		file << std::fixed << std::setprecision(12)
+		     << totalTime << "\t" << r << "\t" << getPop(0) << "\t" << getPop(1) << std::endl;
+
+		if(count > trail) break;
 	}
 
 	return relaxationPeriod;
