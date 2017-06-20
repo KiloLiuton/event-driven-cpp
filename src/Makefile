@@ -12,13 +12,13 @@ INCLUDE_PATH = ../include
 DEPS = $(INCLUDE_PATH)/*.hpp
 
 LIBS = -lm
-CFLAGS = -Wall -I $(INCLUDE_PATH) -std=c++11
+CFLAGS = -Wall -I $(INCLUDE_PATH) -std=c++11 -pg
 
 # make objects
 $(OBJ_PATH)/%.o : %.cpp $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-# make executable
+# link objects (make executable)
 $(PROG_NAME) : $(OBJ)
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 

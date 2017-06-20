@@ -19,14 +19,14 @@ int main(int argc, char *argv[]) {
 
 	// define lattice parameters:
 	// any changes regarding topology should be done by creating a new lattice instance.
-	const int SIZE = 201;
-	const int K = 50;
+	const int SIZE = 51;
+	const int K = 10;
 	const double REWIRE_PROB = 0.0; // TODO : this is not implemented yet! only create regular rings
 	double couplingStrength = 1.3;
 
 	// set simulation parameters
-	const size_t MAX_ITERS = 20000; // maximum amount of iterations in case system takes too long to relax
-	const size_t TRIALS = 300; // number of independent runs for each 'couplingStrength' value
+	const size_t MAX_ITERS = 2000; // maximum amount of iterations in case system takes too long to relax
+	const size_t TRIALS = 100; // number of independent runs for each 'couplingStrength' value
 
 	// paths to data storage folders
 	std::string rvsaData ("../rvsaData/");
@@ -63,7 +63,8 @@ int main(int argc, char *argv[]) {
 	// CREATE LATTICE INSTANCE
 	Lattice simulation(SIZE, K, REWIRE_PROB, couplingStrength, rng);
 
-	// write relaxatoin header
+	// relaxation run
+	// write relaxation header
 	relaxationFile << "# data used to determine relaxation period.\n"
 		           << "# dt\tr\tN0\tN1\n";
 
@@ -71,7 +72,7 @@ int main(int argc, char *argv[]) {
 	//	   This function gets the average of the order parameter for a block of 'trail' events. The next block
 	//		   is obtained by shifting the block one event (discard the first event and include the next).
 	//		   If the average of the new block is less than 'threshold' of the average of the first block,
-	//		   increment a cout value. If this count value reaches a size equal to trail, break the loop and
+	//		   increment a count value. If this count value reaches a size equal to trail, break the loop and
 	//		   return the current value of steps.
 	// TODO: simulation run currently ignores any values found by the relaxation period step. Implement
 	//       this after the relaxation period has been fixed.
@@ -93,9 +94,7 @@ int main(int argc, char *argv[]) {
 	         << "\tpointsAfterRelaxation=" << pointsAfterRelaxation << std::endl
 			 << "# a" << "\t<<r>>" << "\tX=<<r2>>-<<r>>2\tX'=<<r>2>-<<r>>2\n";
 
-	// TODO: isolate trial-run into it's own function in lattice.cpp (to simplify the nested loops):
-	//       double Lattice::runTrial(MAX_ITERS, relaxationPeriod, pointsAfterRelaxation);
-	//       that returns <r>
+	// TODO: isolate trial-run into it's own function in lattice.cpp (to simplify the nested loops)
 	//
 	// outer loop: set coupling strength
 	//     middle loop: start a trial
