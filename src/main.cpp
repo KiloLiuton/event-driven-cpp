@@ -19,13 +19,13 @@ int main(int argc, char *argv[]) {
 
 	// define lattice parameters:
 	// any changes regarding topology should be done by creating a new lattice instance.
-	const int SIZE = 51;
-	const int K = 10;
+	const int SIZE = 11;
+	const int K = 3;
 	const double REWIRE_PROB = 0.0; // TODO : this is not implemented yet! only create regular rings
 	double couplingStrength = 1.3;
 
 	// set simulation parameters
-	const size_t MAX_ITERS = 2000; // maximum amount of iterations in case system takes too long to relax
+	const size_t MAX_ITERS = 1000; // maximum amount of iterations in case system takes too long to relax
 	const size_t TRIALS = 100; // number of independent runs for each 'couplingStrength' value
 
 	// paths to data storage folders

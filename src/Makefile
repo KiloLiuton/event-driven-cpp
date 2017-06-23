@@ -11,8 +11,9 @@ INCLUDE_PATH = ../include
 # include all .hpp headers in ../include folder
 DEPS = $(INCLUDE_PATH)/*.hpp
 
+# -pg is a flag for the gprof profiler
 LIBS = -lm
-CFLAGS = -Wall -I $(INCLUDE_PATH) -std=c++11 -pg
+CFLAGS = -Wall -I $(INCLUDE_PATH) -std=c++11
 
 # make objects
 $(OBJ_PATH)/%.o : %.cpp $(DEPS)

@@ -18,7 +18,10 @@ Lattice::Lattice(int N, int k, double p, double couplingStrength, pcg64& rng) : 
 	states.resize(N);
 	transitionRates.resize(N);
 	deltas.resize(N);
-	transitionsTable.resize((Topology::maxNeighbors + Topology::minNeighbors + 1) * (Topology::maxNeighbors - Topology::minNeighbors + 1));
+	int max = Topology::getMaxNeighbors();
+	int min = Topology::getMinNeighbors();
+	// resize transitions table to accomodate all possible transition values
+	transitionsTable.resize((max + min + 1) * (max - min + 1));
 
 	initializeStates();
 	calculateTransitionsTable();
@@ -45,7 +48,7 @@ void Lattice::initializeStates()
 				++N2;
 				break;
 			default:
-					throw std::runtime_error("invalid state value in 'initializeStates'");
+				throw std::runtime_error("invalid state value in 'initializeStates'");
 		}
 	}
 }
@@ -54,9 +57,7 @@ void Lattice::initializeDeltas()
 {
 	// get the delta value for each site and get its transition rate
 	for(int i = 0; i < N; ++i) {
-		std::vector<int> neighbors = Topology::getNeighbors(i);
-		int delta = getSiteDelta(i);
-		deltas[i] = delta;
+		deltas[i] = getSiteDelta(i);
 	}
 }
 
@@ -64,7 +65,7 @@ void Lattice::initializeRates()
 {
 	totalRate = 0;
 	for(int i = 0; i < N; ++i) {
-		double g = transitionsTable[expIndex(Topology::kernelSizes[i], deltas[i])];
+		double g = transitionsTable[expIndex(Topology::getKernelSize(i), deltas[i])];
 		transitionRates[i] = g;
 		totalRate += g;
 	}
@@ -73,9 +74,9 @@ void Lattice::initializeRates()
 int Lattice::getSiteDelta(int site)
 {
 	int delta = 0;
-	std::vector<int> neighbors = Topology::getNeighbors(site);
 	short int currentState = states[site];
 	short int nextState = (currentState+1)%3;
+	std::vector<int> neighbors = Topology::getNeighbors(site);
 	for(const auto& n : neighbors) {
 		short int neighborState = states[n];
 		if(neighborState == currentState) --delta;
@@ -103,8 +104,9 @@ void Lattice::transitionSite(int site)
 {
 	// this function is called if 'site' transitioned. Then, update its state, delta and transition rate.
 	// also updates its neighbors deltas and transition rates.
+
+	// update site state and populations
 	short int newState = (states[site]+1)%3;
-	short int newNextState = (newState+1)%3;
 	states[site] = newState;
 	switch(newState) {
 		case 0:
@@ -123,8 +125,11 @@ void Lattice::transitionSite(int site)
 			throw std::runtime_error("transitioned to an invalid state in 'transitionSite'");
 	}
 
-	std::vector<int> neighbors = Topology::getNeighbors(site);
-	for(const auto& n : neighbors) {
+	// update neighbors states and all deltas
+	//	'site' has its delta changed a number of times equal to its kernelSize
+	//	each 'n' retains its state and have its delta changed exaclty one time
+	short int newNextState = (newState+1)%3;
+	for(const auto& n : Topology::getNeighbors(site)) {
 		short int neighborState = states[n];
 		if(neighborState == newState) {
 			deltas[site] -= 2;
@@ -138,18 +143,15 @@ void Lattice::transitionSite(int site)
 			deltas[site] += 1;
 			deltas[n] += 2;
 		}
-		// site 'n' have its delta changed exaclty one time, because only 'site'
-		// transitioned and 'n' retains its state
-		totalRate -= transitionRates[n];
-		double newRate = transitionsTable[expIndex(Topology::kernelSizes[n], deltas[n])];
-		transitionRates[n] = newRate;
+		double newRate = transitionsTable[expIndex(Topology::getKernelSize(n), deltas[n])];
 		totalRate += newRate;
+		totalRate -= transitionRates[n];
+		transitionRates[n] = newRate;
 	}
-	// 'site' has its delta changed a number of times equal to its kernelSize
-	totalRate -= transitionRates[site];
-	double newRate = transitionsTable[expIndex(neighbors.size(), deltas[site])];
-	transitionRates[site] = newRate;
+	double newRate = transitionsTable[expIndex(Topology::getKernelSize(site), deltas[site])];
 	totalRate += newRate;
+	totalRate -= transitionRates[site];
+	transitionRates[site] = newRate;
 }
 
 void Lattice::calculateTransitionsTable()
@@ -159,7 +161,7 @@ void Lattice::calculateTransitionsTable()
 	// transition rate: g = exp[a*(Knext - Ksame)/K]
 	// number of possible transitions: (kmax + kmin + 1)*(kmax - kmin + 1)
 	int i = 0;
-	for(int k = Topology::minNeighbors; k < Topology::maxNeighbors + 1; ++k) {
+	for(int k = Topology::getMinNeighbors(); k < Topology::getMaxNeighbors() + 1; ++k) {
 		for(int ki = -k; ki <= k; ++ki) {
 			transitionsTable[i] = exp(couplingStrength*ki/k);
 			++i;
@@ -171,10 +173,10 @@ int Lattice::expIndex(int k, int dk)
 {
 	// use this function to get the correct value of the exponential for k and dk.
 	// return the one dimensional index with the value of exp(a*dk/k).
-	if(k > Topology::maxNeighbors || k < Topology::minNeighbors || dk > k || dk < -k) {
+	if(k > Topology::getMaxNeighbors() || k < Topology::getMinNeighbors() || dk > k || dk < -k) {
 		throw std::runtime_error("accessing index out of bounds in expTable");
 	}
-	return (k - Topology::minNeighbors) * (Topology::minNeighbors + k) + (k + dk);
+	return (k - Topology::getMinNeighbors()) * (Topology::getMinNeighbors() + k) + (k + dk);
 }
 
 void Lattice::setCouplingStrength(double a)
@@ -296,7 +298,7 @@ void Lattice::print()
 	std::cout << std::endl;
 	
 	std::cout << "populations: " << N0 << " " << N1 << " " << N2 << std::endl;
-	std::cout << "min/max neighbors: " << Topology::minNeighbors << "," << Topology::maxNeighbors << std::endl;
+	std::cout << "min/max neighbors: " << Topology::getMinNeighbors() << "," << Topology::getMaxNeighbors() << std::endl;
 
 	std::cout << "transition rates: ";
 	std::cout.precision(3);
