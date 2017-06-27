@@ -25,6 +25,8 @@ Topology::Topology(int N, int k, double p)
 	}
 }
 
+int Topology::index(int i, int j) { return N*i+j; }
+
 std::vector<int> Topology::getNeighbors(int x)
 {
 	// return all neighbors of site x by sweeping row
@@ -41,10 +43,11 @@ std::vector<int> Topology::getNeighbors(int x)
 
 void Topology::printTopology()
 {
-	// print the half-matrix connectome
-	for(int i = 0; i < N-1; ++i) {
-		for(int j = N-i; j < N; ++j) { std::cout << "- "; }
-		for(int j = i+1; j < N; ++j) { std::cout << connectome[index(i,j)] << " "; }
+	// print the connectome
+	for(int i = 0; i < N; ++i) {
+		for(int j = 0; j < N; j++) {
+			std::cout << connectome[index(i,j)] << " ";
+		}
 		std::cout << std::endl;
 	}
 }
@@ -54,10 +57,10 @@ void Topology::regularRing()
 	// populate connectome with regular ring connectivity
 	connectome.resize(N*N, false);
 	int idx;
-	for(int i = 0; i < N-1; ++i) {
+	for(int i = 0; i < N; ++i) {
 		for(int j = 0; j < N; ++j) {
 			idx = index(i,j);
-			if(abs(i-j) < k && i != j) { // if i is connected to j increment its kernels
+			if(distance(i,j) <= k && i != j) { // if i is connected to j increment its kernels
 				connectome[idx] = true;
 				++kernelSizes[i];
 				++kernelSizes[j];
@@ -67,8 +70,11 @@ void Topology::regularRing()
 	std::cout << "Created regular ring with N=" << N << " and k=" << k << std::endl;
 }
 
-
-int Topology::index(int i, int j)
+int Topology::distance(int i, int j)
 {
-	return N*i+j;
+	int distance = abs(i-j);
+	if(distance <= N/2) return distance;
+	else return N-distance;
+
+	return distance;
 }

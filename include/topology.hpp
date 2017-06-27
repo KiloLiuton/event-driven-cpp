@@ -27,6 +27,7 @@ private:
 
 	void regularRing();
 	int index(int, int);
+	int distance(int, int);
 };
 
 #endif

@@ -65,6 +65,7 @@ void Lattice::initializeRates()
 {
 	totalRate = 0;
 	for(int i = 0; i < N; ++i) {
+		if(deltas[i] > 6 || deltas[i] < -6) std::cout << "initializeRates problem\n";
 		double g = transitionsTable[expIndex(Topology::getKernelSize(i), deltas[i])];
 		transitionRates[i] = g;
 		totalRate += g;
@@ -106,7 +107,8 @@ void Lattice::transitionSite(int site)
 	// also updates its neighbors deltas and transition rates.
 
 	// update site state and populations
-	short int newState = (states[site]+1)%3;
+	short int currentState = states[site];
+	short int newState = (currentState+1)%3;
 	states[site] = newState;
 	switch(newState) {
 		case 0:
@@ -128,26 +130,27 @@ void Lattice::transitionSite(int site)
 	// update neighbors states and all deltas
 	//	'site' has its delta changed a number of times equal to its kernelSize
 	//	each 'n' retains its state and have its delta changed exaclty one time
-	short int newNextState = (newState+1)%3;
 	for(const auto& n : Topology::getNeighbors(site)) {
 		short int neighborState = states[n];
 		if(neighborState == newState) {
 			deltas[site] -= 2;
 			deltas[n] -= 1;
 		}
-		else if(neighborState == newNextState) {
-			deltas[site] += 1;
-			deltas[n] -= 1;
-		}
-		else {
+		else if(neighborState == currentState) {
 			deltas[site] += 1;
 			deltas[n] += 2;
 		}
+		else {
+			deltas[site] += 1;
+			deltas[n] -= 1;
+		}
+		if(deltas[n] > 6 || deltas[n] < -6) std::cout << "transition neighbor problem\n";
 		double newRate = transitionsTable[expIndex(Topology::getKernelSize(n), deltas[n])];
 		totalRate += newRate;
 		totalRate -= transitionRates[n];
 		transitionRates[n] = newRate;
 	}
+	if(deltas[site] > 6 || deltas[site] < -6) std::cout << "transition site problem\n";
 	double newRate = transitionsTable[expIndex(Topology::getKernelSize(site), deltas[site])];
 	totalRate += newRate;
 	totalRate -= transitionRates[site];

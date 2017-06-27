@@ -62,6 +62,7 @@ int main(int argc, char *argv[]) {
 
 	// CREATE LATTICE INSTANCE
 	Lattice simulation(SIZE, K, REWIRE_PROB, couplingStrength, rng);
+	simulation.printTopology();
 
 	// relaxation run
 	// write relaxation header
