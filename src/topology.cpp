@@ -25,49 +25,38 @@ Topology::Topology(int N, int k, double p)
 	}
 }
 
-int Topology::index(int i, int j) { return N*i+j; }
-
-std::vector<int> Topology::getNeighbors(int x)
-{
-	// return all neighbors of site x by sweeping row
-	std::vector<int> neighbors;
-
-	for(int j = 0; j < N; ++j) {
-		if(connectome[index(x,j)]) {
-			neighbors.push_back(j);
-		}
-	}
-
-	return neighbors;
-}
-
 void Topology::printTopology()
 {
-	// print the connectome
-	for(int i = 0; i < N; ++i) {
-		for(int j = 0; j < N; j++) {
-			std::cout << connectome[index(i,j)] << " ";
-		}
-		std::cout << std::endl;
-	}
 }
 
 void Topology::regularRing()
 {
-	// populate connectome with regular ring connectivity
-	connectome.resize(N*N, false);
+	// populate the three relevant vectors:
+	// kernelSizes - stores the number of neighbors for each site (N elements)
+	// kernelList - stores the kernels of each site in sequence (N*k elements)
+	// kernelId - stores the begining of each kernel for accessing kernelList (N elements)
+	std::vector<bool> connectome(N*N, false);
 	int idx;
 	for(int i = 0; i < N; ++i) {
 		for(int j = 0; j < N; ++j) {
-			idx = index(i,j);
-			if(distance(i,j) <= k && i != j) { // if i is connected to j increment its kernels
+			idx = N*i+j;
+			if(distance(i,j) <= k && i != j) { // if i is connected to j on a regular ring
 				connectome[idx] = true;
 				++kernelSizes[i];
-				++kernelSizes[j];
+				kernelList.push_back(j);
 			}
 		}
 	}
+
+	// generate kernel indexes
+	int sum = 0;
+	for(int i = 0; i < N; ++i) {
+		kernelId.push_back(sum);
+		sum += kernelSizes[i];
+	}
+
 	std::cout << "Created regular ring with N=" << N << " and k=" << k << std::endl;
+	std::cout << "kernelList vector has " << kernelList.size() << " elements" << std::endl;
 }
 
 int Topology::distance(int i, int j)

@@ -65,8 +65,7 @@ void Lattice::initializeRates()
 {
 	totalRate = 0;
 	for(int i = 0; i < N; ++i) {
-		if(deltas[i] > 6 || deltas[i] < -6) std::cout << "initializeRates problem\n";
-		double g = transitionsTable[expIndex(Topology::getKernelSize(i), deltas[i])];
+		double g = transitionsTable[expIndex(Topology::kernelSizes[i], deltas[i])];
 		transitionRates[i] = g;
 		totalRate += g;
 	}
@@ -77,9 +76,14 @@ int Lattice::getSiteDelta(int site)
 	int delta = 0;
 	short int currentState = states[site];
 	short int nextState = (currentState+1)%3;
-	std::vector<int> neighbors = Topology::getNeighbors(site);
-	for(const auto& n : neighbors) {
-		short int neighborState = states[n];
+
+	int kernelIndex = Topology::kernelId[site];
+	int kernelSize = Topology::kernelSizes[site];
+	for(int i = kernelIndex; i < kernelIndex+kernelSize; ++i) {
+
+		int neighborSiteIndex = Topology::kernelList[i];
+
+		short int neighborState = states[neighborSiteIndex];
 		if(neighborState == currentState) --delta;
 		else if(neighborState == nextState) ++delta;
 	}
@@ -128,30 +132,34 @@ void Lattice::transitionSite(int site)
 	}
 
 	// update neighbors states and all deltas
-	//	'site' has its delta changed a number of times equal to its kernelSize
-	//	each 'n' retains its state and have its delta changed exaclty one time
-	for(const auto& n : Topology::getNeighbors(site)) {
-		short int neighborState = states[n];
+	//	the transitioning site has its delta changed a number of times equal to its kernelSize
+	//	each neighbors retains its state and have its delta changed exaclty one time
+
+	int kernelIndex = Topology::kernelId[site];
+	int kernelSize = Topology::kernelSizes[site];
+	for(int i = kernelIndex; i < kernelIndex+kernelSize; ++i) {
+
+		int neighborSiteIndex = Topology::kernelList[i];
+
+		short int neighborState = states[neighborSiteIndex];
 		if(neighborState == newState) {
 			deltas[site] -= 2;
-			deltas[n] -= 1;
+			deltas[neighborSiteIndex] -= 1;
 		}
 		else if(neighborState == currentState) {
 			deltas[site] += 1;
-			deltas[n] += 2;
+			deltas[neighborSiteIndex] += 2;
 		}
 		else {
 			deltas[site] += 1;
-			deltas[n] -= 1;
+			deltas[neighborSiteIndex] -= 1;
 		}
-		if(deltas[n] > 6 || deltas[n] < -6) std::cout << "transition neighbor problem\n";
-		double newRate = transitionsTable[expIndex(Topology::getKernelSize(n), deltas[n])];
+		double newRate = transitionsTable[expIndex(Topology::kernelSizes[neighborSiteIndex], deltas[neighborSiteIndex])];
 		totalRate += newRate;
-		totalRate -= transitionRates[n];
-		transitionRates[n] = newRate;
+		totalRate -= transitionRates[neighborSiteIndex];
+		transitionRates[neighborSiteIndex] = newRate;
 	}
-	if(deltas[site] > 6 || deltas[site] < -6) std::cout << "transition site problem\n";
-	double newRate = transitionsTable[expIndex(Topology::getKernelSize(site), deltas[site])];
+	double newRate = transitionsTable[expIndex(Topology::kernelSizes[site], deltas[site])];
 	totalRate += newRate;
 	totalRate -= transitionRates[site];
 	transitionRates[site] = newRate;

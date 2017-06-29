@@ -12,21 +12,20 @@ public:
 
 	int getMaxNeighbors() { return maxNeighbors; }
 	int getMinNeighbors() { return minNeighbors; }
-	int getKernelSize(int i) { return kernelSizes[i]; }
-	std::vector<int> getNeighbors(int);
 
 	void printTopology();
+
+	std::vector<int> kernelList;
+	std::vector<int> kernelId;
+	std::vector<int> kernelSizes;
 
 private:
 	int N, k; // size and number of forward neighbors
 	double p; // reconnection probability
 	int minNeighbors, maxNeighbors;
 
-	std::vector<bool> connectome;
-	std::vector<int> kernelSizes;
 
 	void regularRing();
-	int index(int, int);
 	int distance(int, int);
 };
 

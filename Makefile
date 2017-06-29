@@ -2,21 +2,23 @@ CC = g++
 
 PROG_NAME = simulate
 
-OBJ_PATH = obj
+OBJ_PATH = src/obj
 _OBJ = topology.o lattice.o main.o
 OBJ = $(patsubst %, $(OBJ_PATH)/%, $(_OBJ))
 
-INCLUDE_PATH = ../include
+INCLUDE_PATH = include
 
 # include all .hpp headers in ../include folder
 DEPS = $(INCLUDE_PATH)/*.hpp
+
+print-%: ; @echo $* = $($*)
 
 # -pg is a flag for the gprof profiler
 LIBS = -lm
 CFLAGS = -Wall -I $(INCLUDE_PATH) -std=c++11
 
 # make objects
-$(OBJ_PATH)/%.o : %.cpp $(DEPS)
+$(OBJ_PATH)/%.o : src/%.cpp $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 # link objects (make executable)
@@ -32,4 +34,4 @@ clean :
 	rm -f $(PROG_NAME) $(OBJ_PATH)/*.o
 
 cleandata :
-	rm ../rvsaData/* ../relaxationData/*
+	rm rvsaData/* relaxationData/*
