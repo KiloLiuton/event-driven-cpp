@@ -19,8 +19,8 @@ int main(int argc, char *argv[]) {
 
 	// define lattice parameters:
 	// any changes regarding topology should be done by creating a new lattice instance.
-	const int SIZE = 400;
-	const int K = 60;
+	const int SIZE = 200;
+	const int K = 30;
 	const double REWIRE_PROB = 0.0; // TODO : this is not implemented yet! only create regular rings
 	double couplingStrength = 1.3;
 
