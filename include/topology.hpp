@@ -8,25 +8,26 @@
 
 class Topology {
 public:
-	Topology(int, int, double); // constructor
+	Topology(const int, const int, const double); // constructor
 
-	int getMaxNeighbors() { return maxNeighbors; }
-	int getMinNeighbors() { return minNeighbors; }
+	int getMaxNeighbors() const { return maxNeighbors; }
+	int getMinNeighbors() const { return minNeighbors; }
 
-	void printTopology();
+	void printTopology() const; // graphically print connectivity matrix
+	void printKernels() const; // print kernels as lists of indexes
 
-	std::vector<int> kernelList;
-	std::vector<int> kernelId;
-	std::vector<int> kernelSizes;
+	std::vector<int> kernelList; // store all kernels sequentially
+	std::vector<int> kernelId; // store an index to the begining of each kernel
+	std::vector<int> kernelSizes; // store all kernel sizes
 
 private:
-	int N, k; // size and number of forward neighbors
-	double p; // reconnection probability
+	const int N, k; // size and number of forward neighbors
+	const double p; // reconnection probability
 	int minNeighbors, maxNeighbors;
 
-
-	void regularRing();
-	int distance(int, int);
+	void createRing();
+	void printKernel(int) const;
+	bool isInKernel(int, int) const;
 };
 
 #endif

@@ -9,7 +9,7 @@
 #include "lattice.hpp"
 #include "topology.hpp"
 
-Lattice::Lattice(int N, int k, double p, double couplingStrength, pcg64& rng) : Topology(N,k,p), N(N), rng(rng), uniform(0.0,1.0)
+Lattice::Lattice(int const N, int const k, double const p, double couplingStrength, pcg64& rng) : Topology(N,k,p), N(N), rng(rng), uniform(0.0,1.0)
 {
 	// set lattice size N, k, and topology at initialization
 	this->couplingStrength = couplingStrength;
@@ -244,39 +244,37 @@ int Lattice::getPop(short int state)
 	}
 }
 
-size_t Lattice::relaxationRun(int trail, double threshold, const size_t MAX_ITERS, std::ofstream& file)
+size_t Lattice::relaxationRun(int const trail, double threshold, const size_t MAX_ITERS, std::ofstream& file)
 {
 	// run a single trial to determine relaxation. Relaxation is found when
 	//    the average order parameter doesn't change more than threshold
 	//    for trail steps.
 
 	// start by running 'trail' steps and storing the 'r' values.
-	double highestAvg = 0; // minimum possible value of r is 0
-	double lowestAvg = 1; // maximum possible value of r is 1
-	double totalTime = 0;
 	std::vector<double> trackR(trail);
-	size_t relaxationPeriod = 1;
-	trackR[0] = getOrderParameter();
-	for(int i = 1; i < trail; ++i) {
-		++relaxationPeriod;
+	size_t stepCounter = 0;
+	double totalTime = 0;
+	for(int i = 0; i < trail; ++i) {
+		++stepCounter;
 		double dt = step();
 		double r = getOrderParameter();
 		trackR[i] = r;
 		totalTime += dt;
 
 		file << std::fixed << std::setprecision(12)
-		     << totalTime << "\t" << r << std::endl;
+		     << totalTime << "\t" << r << "\t" << getPop(0) << "\t" << getPop(1) << std::endl;
 	}
 	// get average of the first block of 'trail' events
 	double avg = std::accumulate(trackR.begin(), trackR.end(), 0) / trackR.size();
-	highestAvg = std::max(highestAvg, avg);
-	lowestAvg = std::min(lowestAvg, avg);
+	double highestAvg = avg;
+	double lowestAvg = avg;
 
 	// for each next step, check if the new average is in an interval of 'threshold'
-	//     around the previous average. If this happens 'trail' consecutive times, break.
+	//     around the previous average. If this happens enough consecutive times, break.
 	int count = 0;
+	size_t relaxationPeriod = 0;
 	for(size_t i = trail; i < MAX_ITERS; ++i) {
-		++relaxationPeriod;
+		++stepCounter;
 		double dt = step();
 		double r = getOrderParameter();
 		double nextAvg = avg + (r - trackR[0]) / trail;
@@ -292,10 +290,19 @@ size_t Lattice::relaxationRun(int trail, double threshold, const size_t MAX_ITER
 		file << std::fixed << std::setprecision(12)
 		     << totalTime << "\t" << r << "\t" << getPop(0) << "\t" << getPop(1) << std::endl;
 
-		if(count > trail) break;
+		if(count > trail && !relaxationPeriod) relaxationPeriod = stepCounter;
 	}
 
-	return relaxationPeriod;
+
+	if (!relaxationPeriod) {
+		file << MAX_ITERS << "\t0\t0\t0\n";
+		std::cout << "Relaxation period expired before converging\n";
+		return MAX_ITERS;
+	}
+	else {
+		file << relaxationPeriod << "\t0\t0\t0\n";
+		return relaxationPeriod;
+	}
 }
 
 void Lattice::print()

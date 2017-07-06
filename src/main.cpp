@@ -9,6 +9,12 @@
 #include "topology.hpp"
 #include "lattice.hpp"
 
+#define LATTICE_SIZE 201
+#define NUMBER_OF_FORWARD_NEIGHBORS 100
+#define REWIRE_PROBABILITY 0.0
+#define MAXIMUM_ITERATIONS 10000
+#define NUMBER_OF_TRIALS 400
+#define RELAXATION_COUPLING 3.09
 #define NON_DETERMINISTIC_SEED true
 
 // TODO:
@@ -19,14 +25,16 @@ int main(int argc, char *argv[]) {
 
 	// define lattice parameters:
 	// any changes regarding topology should be done by creating a new lattice instance.
-	const int SIZE = 200;
-	const int K = 30;
-	const double REWIRE_PROB = 0.0; // TODO : this is not implemented yet! only create regular rings
-	double couplingStrength = 1.3;
+	const int SIZE = LATTICE_SIZE;
+	const int K = NUMBER_OF_FORWARD_NEIGHBORS;
+	const double REWIRE_PROB = REWIRE_PROBABILITY;
+	double couplingStrength = RELAXATION_COUPLING;
 
 	// set simulation parameters
-	const size_t MAX_ITERS = 1000; // maximum amount of iterations in case system takes too long to relax
-	const size_t TRIALS = 200; // number of independent runs for each 'couplingStrength' value
+	// maximum amount of iterations in case system takes too long to relax
+	const size_t MAX_ITERS = MAXIMUM_ITERATIONS;
+	// number of independent runs for each 'couplingStrength' value
+	const size_t TRIALS = NUMBER_OF_TRIALS;
 
 	// paths to data storage folders
 	std::string rvsaData ("rvsaData/");
@@ -62,7 +70,7 @@ int main(int argc, char *argv[]) {
 
 	// CREATE LATTICE INSTANCE
 	Lattice simulation(SIZE, K, REWIRE_PROB, couplingStrength, rng);
-	simulation.printTopology();
+	//simulation.printTopology();
 
 	// relaxation run
 	// write relaxation header
@@ -70,18 +78,18 @@ int main(int argc, char *argv[]) {
 		           << "# dt\tr\tN0\tN1\n";
 
 	// FIXME: This function might not be the best solution to detecting relaxation.
-	//	   This function gets the average of the order parameter for a block of 'trail' events. The next block
-	//		   is obtained by shifting the block one event (discard the first event and include the next).
-	//		   If the average of the new block is less than 'threshold' of the average of the first block,
-	//		   increment a count value. If this count value reaches a size equal to trail, break the loop and
-	//		   return the current value of steps.
-	// TODO: simulation run currently ignores any values found by the relaxation period step. Implement
-	//       this after the relaxation period has been fixed.
-	//
-	// size_t relaxationRun(trail, threshold, MAX_ITERS, outputfile) threshold>1.0 ensures it runs for MAX_ITERS
-	//     the order parameter, step duration and populations are recorded in outputfile for every step.
+	//  This function gets the average of the order parameter for a block of 'trail' events. The next block
+	// is obtained by shifting the block one event (discard the first event and include the next).
+	//  If the average of the new block is less than 'threshold' of the average of the first block,
+	// increment a count value. If this count value reaches a size equal to trail, break the loop and
+	// return the current value of steps.
+
+	// relaxationRun parameters:
+	// blockSize - track the average OP in blockSize steps. Smalls values -> higher fluctuations
 	size_t relaxationPeriod = simulation.relaxationRun(100, 2.0, MAX_ITERS, relaxationFile);
-	size_t pointsAfterRelaxation = 666666666666;
+	size_t pointsAfterRelaxation = MAX_ITERS;
+	std::cout << "Relaxation returned " << relaxationPeriod << " iterations for relaxation period.\n";
+	std::cout << "Proceeding to burn " << relaxationPeriod << " steps and record " << pointsAfterRelaxation << "\n";
 
 	// r vs a run
 	// start by creating a vector with the coupling strength values
@@ -96,10 +104,10 @@ int main(int argc, char *argv[]) {
 			 << "# a" << "\t<<r>>" << "\tX=<<r2>>-<<r>>2\tX'=<<r>2>-<<r>>2\n";
 
 	// TODO: isolate trial-run into it's own function in lattice.cpp (to simplify the nested loops)
-	//
-	// outer loop: set coupling strength
-	//     middle loop: start a trial
-	//         inner loop: run a single trial for MAX_ITERS steps at most
+
+	// outer loop: set coupling strength for trials
+	//     middle loop: perform all trials
+	//         inner loop: perform a single trial
 	for(size_t a = 0; a < aRange.size(); ++a) {
 		simulation.setCouplingStrength(aRange[a]);
 		double rAvgSum = 0;
@@ -110,8 +118,11 @@ int main(int argc, char *argv[]) {
 			double r2Sum = 0;
 			double dtSum = 0;
 
-			// each trial consist of 'MAX_ITERS' steps at most, and the first 'relaxationPeriod' steps are discarded
-			for(size_t i = 0; i < MAX_ITERS; ++i) {
+			// discard the first 'relaxationPeriod' steps
+			for (size_t i = 0; i < relaxationPeriod; ++i) simulation.step();
+
+			// record data after relaxation period and for pointsAfterRelaxation
+			for(size_t i = 0; i < pointsAfterRelaxation; ++i) {
 				double dt = simulation.step();
 				double r = simulation.getOrderParameter();
 				rSum += r*dt;
@@ -131,7 +142,9 @@ int main(int argc, char *argv[]) {
 		double X = r2AvgAvg - rAvgAvg*rAvgAvg;    // <<r^2>> - <<r>>^2
 		double Xnew = rAvg2Avg - rAvgAvg*rAvgAvg; // <<r>^2> - <<r>>^2
 
-		std::cout << aRange[a] << " finished\t" << "[" << a+1 << "/" << numPoints << "]\n"; // track progress
+		// track progress
+		std::cout << aRange[a] << " finished\t" << "[" << a+1 << "/" << numPoints << "]\n";
+		// write to file
 		rvsaFile << std::fixed << std::setprecision(12)
 		         << aRange[a] << "\t" << rAvgAvg << "\t" << X << "\t" << Xnew << std::endl;
 	}

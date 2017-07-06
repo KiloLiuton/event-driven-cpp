@@ -15,7 +15,7 @@ print-%: ; @echo $* = $($*)
 
 # -pg is a flag for the gprof profiler
 LIBS = -lm
-CFLAGS = -Wall -I $(INCLUDE_PATH) -std=c++11
+CFLAGS = -Wall -I $(INCLUDE_PATH) -std=c++11 -O3 -march=native
 
 # make objects
 $(OBJ_PATH)/%.o : src/%.cpp $(DEPS)
