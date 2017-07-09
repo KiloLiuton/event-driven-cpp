@@ -9,13 +9,16 @@
 #include "topology.hpp"
 #include "lattice.hpp"
 
-#define LATTICE_SIZE 201
-#define NUMBER_OF_FORWARD_NEIGHBORS 100
+#define LATTICE_SIZE 3201
+#define NUMBER_OF_FORWARD_NEIGHBORS 1600
 #define REWIRE_PROBABILITY 0.0
-#define MAXIMUM_ITERATIONS 10000
-#define NUMBER_OF_TRIALS 400
-#define RELAXATION_COUPLING 3.09
+#define MAXIMUM_ITERATIONS 30000
+#define NUMBER_OF_TRIALS 800
 #define NON_DETERMINISTIC_SEED true
+#define RELAXATION_COUPLING 2.59
+#define RELAXATION_BLOCK_SIZE 100
+#define RELAXATION_THRESHOLD 0.005
+#define NUM_CHUNKS 5
 
 // TODO:
 // - monitor file changes with python script for real time plotting
@@ -34,7 +37,6 @@ int main(int argc, char *argv[]) {
 	// maximum amount of iterations in case system takes too long to relax
 	const size_t MAX_ITERS = MAXIMUM_ITERATIONS;
 	// number of independent runs for each 'couplingStrength' value
-	const size_t TRIALS = NUMBER_OF_TRIALS;
 
 	// paths to data storage folders
 	std::string rvsaData ("rvsaData/");
@@ -43,14 +45,14 @@ int main(int argc, char *argv[]) {
 	// create relaxation&rvsa filenames. If either exists, append a '+' to its name
 	std::ostringstream oss;
 	oss << "relaxation-" << "N=" << SIZE << "k=" << K << "p=" << REWIRE_PROB
-		<< "a=" << couplingStrength << "TRIALS=" << TRIALS << ".txt";
+		<< "a=" << couplingStrength << "TRIALS=" << NUMBER_OF_TRIALS << "ITER=" << MAX_ITERS << ".txt";
 	std::string relaxationFilename = oss.str();
 	while(std::ifstream(relaxationData + relaxationFilename)) {
 		relaxationFilename = relaxationFilename.substr(0, relaxationFilename.size()-4) + "+.txt";
 	}
 	oss.str("");
 	oss << "rvsa-" << "N=" << SIZE << "k=" << K << "p=" << REWIRE_PROB
-		<< "TRIALS=" << TRIALS << ".txt";
+		<< "TRIALS=" << NUMBER_OF_TRIALS << "ITER=" << MAX_ITERS << ".txt";
 	std::string rvsaFilename = oss.str();
 	while(std::ifstream(rvsaData + rvsaFilename)) {
 		rvsaFilename = rvsaFilename.substr(0, rvsaFilename.size()-4) + "+.txt";
@@ -86,10 +88,16 @@ int main(int argc, char *argv[]) {
 
 	// relaxationRun parameters:
 	// blockSize - track the average OP in blockSize steps. Smalls values -> higher fluctuations
-	size_t relaxationPeriod = simulation.relaxationRun(100, 2.0, MAX_ITERS, relaxationFile);
+	size_t relaxationPeriod = simulation.relaxationRun(
+			RELAXATION_BLOCK_SIZE,
+			RELAXATION_THRESHOLD,
+			2*MAX_ITERS,
+			relaxationFile
+			);
 	size_t pointsAfterRelaxation = MAX_ITERS;
 	std::cout << "Relaxation returned " << relaxationPeriod << " iterations for relaxation period.\n";
-	std::cout << "Proceeding to burn " << relaxationPeriod << " steps and record " << pointsAfterRelaxation << "\n";
+	std::cout << "Proceeding to burn " << relaxationPeriod << " steps and record " << pointsAfterRelaxation;
+	std::cout << " for " << NUMBER_OF_TRIALS << " trials.\n";
 
 	// r vs a run
 	// start by creating a vector with the coupling strength values
@@ -99,7 +107,7 @@ int main(int argc, char *argv[]) {
 	for(int i=0; i<numPoints; ++i) aRange[i] = initialCoupling + i*(finalCoupling - initialCoupling)/numPoints;
 
 	// write rvsa header (order parameter r vs coupling strength a)
-	rvsaFile << "# TRIALS=" << TRIALS << "\trelaxationPeriod=" << relaxationPeriod
+	rvsaFile << "# TRIALS=" << NUMBER_OF_TRIALS << "\trelaxationPeriod=" << relaxationPeriod
 	         << "\tpointsAfterRelaxation=" << pointsAfterRelaxation << std::endl
 			 << "# a" << "\t<<r>>" << "\tX=<<r2>>-<<r>>2\tX'=<<r>2>-<<r>>2\n";
 
@@ -113,7 +121,7 @@ int main(int argc, char *argv[]) {
 		double rAvgSum = 0;
 		double r2AvgSum = 0;
 		double rAvg2Sum = 0;
-		for(size_t j = 0; j < TRIALS; ++j) { // run TRIALS trials for each coupling strength
+		for(size_t j = 0; j < NUMBER_OF_TRIALS; ++j) { // run trials for each coupling strength
 			double rSum = 0;
 			double r2Sum = 0;
 			double dtSum = 0;
@@ -122,12 +130,18 @@ int main(int argc, char *argv[]) {
 			for (size_t i = 0; i < relaxationPeriod; ++i) simulation.step();
 
 			// record data after relaxation period and for pointsAfterRelaxation
-			for(size_t i = 0; i < pointsAfterRelaxation; ++i) {
-				double dt = simulation.step();
-				double r = simulation.getOrderParameter();
-				rSum += r*dt;
-				r2Sum += r*r*dt;
-				dtSum += dt;
+			// here we break up the loop in smaller chunks in order to refresh
+			// the total rate and avoid numerical errors
+			size_t chunkSize = pointsAfterRelaxation/NUM_CHUNKS;
+			for(size_t i = 0; i < NUM_CHUNKS; ++i) {
+				for (size_t j = 0; j < chunkSize; ++j) {
+					double dt = simulation.step();
+					double r = simulation.getOrderParameter();
+					rSum += r*dt;
+					r2Sum += r*r*dt;
+					dtSum += dt;
+				}
+				simulation.resetTotalRate();
 			}
 			double rAvg = rSum / dtSum;
 			double r2Avg = r2Sum / dtSum;
@@ -136,9 +150,9 @@ int main(int argc, char *argv[]) {
 			r2AvgSum += r2Avg;
 			rAvg2Sum += rAvg*rAvg;
 		}
-		double rAvgAvg = rAvgSum / TRIALS;        // <<r>>
-		double r2AvgAvg = r2AvgSum / TRIALS;      // <<r^2>>
-		double rAvg2Avg = rAvg2Sum / TRIALS;      // <<r>^2>
+		double rAvgAvg = rAvgSum / NUMBER_OF_TRIALS;        // <<r>>
+		double r2AvgAvg = r2AvgSum / NUMBER_OF_TRIALS;      // <<r^2>>
+		double rAvg2Avg = rAvg2Sum / NUMBER_OF_TRIALS;      // <<r>^2>
 		double X = r2AvgAvg - rAvgAvg*rAvgAvg;    // <<r^2>> - <<r>>^2
 		double Xnew = rAvg2Avg - rAvgAvg*rAvgAvg; // <<r>^2> - <<r>>^2
 

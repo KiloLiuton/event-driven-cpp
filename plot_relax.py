@@ -17,6 +17,12 @@ smoothdata = int(input("enter amount of smoothing (0 for none):"));
 
 colors = getColors(len(indexes))
 
+fig = plt.figure(figsize=(8,len(indexes)*4))
+ax = fig.add_subplot(1+len(indexes),1,1)
+ax_pops = [0]*len(indexes)
+for i in range(len(indexes)):
+    ax_pops[i] = fig.add_subplot(1+len(indexes),1,2+i, sharex=ax)
+
 for c,idx in enumerate(indexes):
     data = np.loadtxt(dataDir+datafiles[idx], skiprows=2)
 
@@ -57,11 +63,13 @@ for c,idx in enumerate(indexes):
         newn0 = n0
         newn1 = n1
 
-    fig = plt.figure()
-    ax = fig.add_subplot(2,1,1)
-    ax2 = fig.add_subplot(2,1,2)
+    titleBegin = datafiles[idx].find("a=")
+    titleEnd = datafiles[idx].find("TRIAL")
+    title = datafiles[idx][titleBegin + 2 : titleEnd]
+
+    ax.set_title(title)
     ax.plot(newdt, newr, '-', lw=0.8, color=colors[c])
     ax.axvline(dt[relaxationPeriod])
-    ax2.plot(newdt, newn0, 'o', color=colors[c])
-    ax2.plot(newdt, newn1, 'o', color=colors[(c+1)%len(colors)])
-    plt.show()
+    ax_pops[c].plot(newdt, newn0, '-', color=colors[c])
+    ax_pops[c].plot(newdt, newn1, '-', color=colors[(c+1)%len(colors)])
+plt.show()

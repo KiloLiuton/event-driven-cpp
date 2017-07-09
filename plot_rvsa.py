@@ -20,8 +20,12 @@ ax = fig.add_subplot(2,1,1)
 ax2 = fig.add_subplot(2,1,2)
 ax2.set_yscale('log')
 
+ax.set_title("|r| vs a")
+ax2.set_title("X vs a")
+
 for i,idx in enumerate(indexes):
-    data = np.loadtxt(dataDir+datafiles[idx], skiprows=2)
+    f = datafiles[idx]
+    data = np.loadtxt(dataDir+f, skiprows=2)
 
     a = data[:,0]
     r = data[:,1]
@@ -33,7 +37,12 @@ for i,idx in enumerate(indexes):
 
     X = X / Xmax
     Xnew = Xnew / Xnewmax
+
+    # get N, k from filename
+    lab = "N=" + f[f.find("N=")+2 : f.find("k=")] + " k=" + f[f.find("k=")+2 : f.find("p=")]
+    print(lab)
     
-    ax.plot(a, r,'o', color=plot_colors[i])
+    ax.plot(a, r,'o', color=plot_colors[i], label=lab)
     ax2.plot(a, Xnew, '-', color=plot_colors[i], lw=1)
+    ax.legend(numpoints=1, loc='best')
 plt.show()

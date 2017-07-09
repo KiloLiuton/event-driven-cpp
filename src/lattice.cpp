@@ -128,13 +128,12 @@ void Lattice::transitionSite(int site)
 			--N1;
 			break;
 		default:
-			throw std::runtime_error("transitioned to an invalid state in 'transitionSite'");
+			throw std::runtime_error("transitioned to an invalid state while transitioning site");
 	}
 
 	// update neighbors states and all deltas
 	//	the transitioning site has its delta changed a number of times equal to its kernelSize
 	//	each neighbors retains its state and have its delta changed exaclty one time
-
 	int kernelIndex = Topology::kernelId[site];
 	int kernelSize = Topology::kernelSizes[site];
 	for(int i = kernelIndex; i < kernelIndex+kernelSize; ++i) {
@@ -197,6 +196,11 @@ void Lattice::setCouplingStrength(double a)
 	initializeRates();
 }
 
+void Lattice::resetTotalRate()
+{
+	totalRate = std::accumulate(transitionRates.begin(), transitionRates.end(), 0.0);
+}
+
 double Lattice::getOrderParameter()
 {
 	// calculate the order parameter for the current state
@@ -211,7 +215,7 @@ double Lattice::step()
 	// return value is the expected time this state will last until next transition.
 	int event = chooseEvent();
 	transitionSite(event);
-	double expectedTime = 1/totalRate;
+	double expectedTime = 1.0/totalRate;
 
 	return expectedTime;
 }
@@ -244,17 +248,17 @@ int Lattice::getPop(short int state)
 	}
 }
 
-size_t Lattice::relaxationRun(int const trail, double threshold, const size_t MAX_ITERS, std::ofstream& file)
+size_t Lattice::relaxationRun(int const blockSize, double threshold, size_t const MAX_ITERS, std::ofstream& file)
 {
 	// run a single trial to determine relaxation. Relaxation is found when
 	//    the average order parameter doesn't change more than threshold
-	//    for trail steps.
+	//    for blockSize steps.
 
-	// start by running 'trail' steps and storing the 'r' values.
-	std::vector<double> trackR(trail);
+	// start by running 'blockSize' steps and storing the 'r' values.
+	std::vector<double> trackR(blockSize);
 	size_t stepCounter = 0;
 	double totalTime = 0;
-	for(int i = 0; i < trail; ++i) {
+	for(int i = 0; i < blockSize; ++i) {
 		++stepCounter;
 		double dt = step();
 		double r = getOrderParameter();
@@ -264,7 +268,7 @@ size_t Lattice::relaxationRun(int const trail, double threshold, const size_t MA
 		file << std::fixed << std::setprecision(12)
 		     << totalTime << "\t" << r << "\t" << getPop(0) << "\t" << getPop(1) << std::endl;
 	}
-	// get average of the first block of 'trail' events
+	// get average of the first block of 'blockSize' events
 	double avg = std::accumulate(trackR.begin(), trackR.end(), 0) / trackR.size();
 	double highestAvg = avg;
 	double lowestAvg = avg;
@@ -273,11 +277,11 @@ size_t Lattice::relaxationRun(int const trail, double threshold, const size_t MA
 	//     around the previous average. If this happens enough consecutive times, break.
 	int count = 0;
 	size_t relaxationPeriod = 0;
-	for(size_t i = trail; i < MAX_ITERS; ++i) {
+	for(size_t i = blockSize; i < MAX_ITERS; ++i) {
 		++stepCounter;
 		double dt = step();
 		double r = getOrderParameter();
-		double nextAvg = avg + (r - trackR[0]) / trail;
+		double nextAvg = avg + (r - trackR[0]) / blockSize;
 		trackR.erase(trackR.begin());
 		trackR.push_back(r);
 		totalTime += dt;
@@ -290,7 +294,7 @@ size_t Lattice::relaxationRun(int const trail, double threshold, const size_t MA
 		file << std::fixed << std::setprecision(12)
 		     << totalTime << "\t" << r << "\t" << getPop(0) << "\t" << getPop(1) << std::endl;
 
-		if(count > trail && !relaxationPeriod) relaxationPeriod = stepCounter;
+		if(count > blockSize && relaxationPeriod == 0) relaxationPeriod = stepCounter;
 	}
 
 

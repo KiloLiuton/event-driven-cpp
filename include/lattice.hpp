@@ -20,6 +20,7 @@ public:
 	void reset();
 	void resetToCoupling(double);
 	void setCouplingStrength(double);
+	void resetTotalRate();
 	void print();
 	void printStates();
 	void printPops();
