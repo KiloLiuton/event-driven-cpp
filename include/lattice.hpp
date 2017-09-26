@@ -12,7 +12,14 @@ class Lattice : public Topology {
 public:
 	// size, k, coupling strength, rewire probability, pcg64 reference for
 	//                                                 a stream of random numbers
-	Lattice(int const, int const, double const, double, pcg64&);
+	Lattice(
+			int const,
+			int const,
+			double const,
+			bool const,
+			double,
+			pcg64&
+			);
 
 	double getOrderParameter();
 	int getPop(short int);

@@ -68,8 +68,8 @@ for c,idx in enumerate(indexes):
     title = datafiles[idx][titleBegin + 2 : titleEnd]
 
     ax.set_title(title)
-    ax.plot(newdt, newr, '-', lw=0.8, color=colors[c])
+    ax.plot(range(len(newr)), newr, '-', lw=0.8, color=colors[c])
     ax.axvline(dt[relaxationPeriod])
-    ax_pops[c].plot(newdt, newn0, '-', color=colors[c])
-    ax_pops[c].plot(newdt, newn1, '-', color=colors[(c+1)%len(colors)])
-plt.show()
+    ax_pops[c].plot(range(len(newn0)), newn0, '-', color=colors[c])
+    ax_pops[c].plot(range(len(newn1)), newn1, '-', color=colors[(c+1)%len(colors)])
+plt.savefig("foobar.png")

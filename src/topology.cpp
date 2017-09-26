@@ -5,9 +5,12 @@
 #include "pcg_random.hpp"
 #include "topology.hpp"
 
-#define USE_NON_DETERMINISTIC_TOPOLOGY false
-
-Topology::Topology(const int N, const int k, const double p) : N(N), k(k), p(p)
+Topology::Topology(
+		int const N,
+		int const k,
+	   	double const p,
+		bool const NON_DETERMINISTIC_TOPOLOGY
+		) : N(N), k(k), p(p), NON_DETERMINISTIC_TOPOLOGY(NON_DETERMINISTIC_TOPOLOGY)
 {
 	createRing();
 
@@ -52,7 +55,7 @@ void Topology::createRing()
 		// make an rng
 		pcg64 rng(42u, 54u);
 		std::uniform_real_distribution<double> uniform(0.0, 1.0);
-		if(USE_NON_DETERMINISTIC_TOPOLOGY) rng.seed(pcg_extras::seed_seq_from<std::random_device>());
+		if(NON_DETERMINISTIC_TOPOLOGY) rng.seed(pcg_extras::seed_seq_from<std::random_device>());
 
 		// for each vertex, loop only through the k clockwise edges
 		for (int currentVertex = 0; currentVertex < N-1; ++currentVertex) {
@@ -62,9 +65,8 @@ void Topology::createRing()
 				int cutVertex = currentVertex + j;
 				if (cutVertex >= N) cutVertex -= N;
 
-				// prevent rewiring from leaving isolated vertices
+				// prevent rewiring from leaving isolated vertices and also chosing invalid edges
 				if (kernelSizes[cutVertex] <= 1) continue;
-
 				int randomVertex = rng(N);
 				while (isInKernel(currentVertex, randomVertex) || randomVertex == currentVertex) randomVertex = rng(N);
 
@@ -144,4 +146,9 @@ void Topology::printKernels() const
 		std::cout << " ";
 	}
 	std::cout << "\n";
+}
+
+void Topology::printToFile() const
+{
+	std::cout << "print to file not implemented yet\n";
 }

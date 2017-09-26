@@ -9,7 +9,14 @@
 #include "lattice.hpp"
 #include "topology.hpp"
 
-Lattice::Lattice(int const N, int const k, double const p, double couplingStrength, pcg64& rng) : Topology(N,k,p), N(N), rng(rng), uniform(0.0,1.0)
+Lattice::Lattice(
+		int const N,
+		int const k,
+		double const p,
+		bool const USE_DETERMINISTIC_TOPOLOGY,
+		double couplingStrength,
+		pcg64& rng
+		) : Topology(N,k,p,USE_DETERMINISTIC_TOPOLOGY), N(N), rng(rng), uniform(0.0,1.0)
 {
 	// set lattice size N, k, and topology at initialization
 	this->couplingStrength = couplingStrength;

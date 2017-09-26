@@ -9,11 +9,11 @@
 #include "topology.hpp"
 #include "lattice.hpp"
 
-#define LATTICE_SIZE 3201
-#define NUMBER_OF_FORWARD_NEIGHBORS 1600
-#define REWIRE_PROBABILITY 0.0
-#define MAXIMUM_ITERATIONS 30000
-#define NUMBER_OF_TRIALS 800
+#define LATTICE_SIZE 801
+#define NUMBER_OF_FORWARD_NEIGHBORS 50
+#define REWIRE_PROBABILITY 0.075
+#define MAXIMUM_ITERATIONS 25000
+#define NUMBER_OF_TRIALS 600
 #define NON_DETERMINISTIC_SEED true
 #define RELAXATION_COUPLING 2.59
 #define RELAXATION_BLOCK_SIZE 100
@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
 	if(NON_DETERMINISTIC_SEED) rng.seed(pcg_extras::seed_seq_from<std::random_device>());
 
 	// CREATE LATTICE INSTANCE
-	Lattice simulation(SIZE, K, REWIRE_PROB, couplingStrength, rng);
+	Lattice simulation(SIZE, K, REWIRE_PROB, false, couplingStrength, rng);
 	//simulation.printTopology();
 
 	// relaxation run
