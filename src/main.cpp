@@ -9,22 +9,33 @@
 #include "topology.hpp"
 #include "lattice.hpp"
 
-#define LATTICE_SIZE 801
-#define NUMBER_OF_FORWARD_NEIGHBORS 50
-#define REWIRE_PROBABILITY 0.075
-#define MAXIMUM_ITERATIONS 25000
-#define NUMBER_OF_TRIALS 600
-#define NON_DETERMINISTIC_SEED true
-#define RELAXATION_COUPLING 2.59
-#define RELAXATION_BLOCK_SIZE 100
-#define RELAXATION_THRESHOLD 0.005
-#define NUM_CHUNKS 5
+static int LATTICE_SIZE = 801;
+static int NUMBER_OF_FORWARD_NEIGHBORS = 50;
+static float REWIRE_PROBABILITY = 0.075;
+static int MAXIMUM_ITERATIONS = 25000;
+static int NUMBER_OF_TRIALS = 600;
+static int NON_DETERMINISTIC_SEED = 1;
+static float RELAXATION_COUPLING = 2.59;
+static int RELAXATION_BLOCK_SIZE = 100;
+static float RELAXATION_THRESHOLD = 0.005;
+static int TIMES_TO_RESET = 5;
+
 
 // TODO:
 // - monitor file changes with python script for real time plotting
 // - write a better README.md using the markdown language
 
 int main(int argc, char *argv[]) {
+	if(auto tmp = getenv("LATTICE_SIZE")) { LATTICE_SIZE = atoi(tmp); }
+	if(auto tmp = getenv("NUMBER_OF_FORWARD_NEIGHBORS")) { NUMBER_OF_FORWARD_NEIGHBORS = atoi(tmp); }
+	if(auto tmp = getenv("REWIRE_PROBABILITY")) { REWIRE_PROBABILITY = atof(tmp); }
+	if(auto tmp = getenv("MAXIMUM_ITERATIONS")) { MAXIMUM_ITERATIONS = atoi(tmp); }
+	if(auto tmp = getenv("NUMBER_OF_TRIALS")) { NUMBER_OF_TRIALS = atoi(tmp); }
+	if(auto tmp = getenv("NON_DETERMINISTIC_SEED")) { NON_DETERMINISTIC_SEED = atoi(tmp); }
+	if(auto tmp = getenv("RELAXATION_COUPLING")) { RELAXATION_COUPLING = atof(tmp); }
+	if(auto tmp = getenv("RELAXATION_BLOCK_SIZE")) { RELAXATION_BLOCK_SIZE = atoi(tmp); }
+	if(auto tmp = getenv("RELAXATION_THRESHOLD")) { RELAXATION_THRESHOLD = atof(tmp); }
+	if(auto tmp = getenv("TIMES_TO_RESET")) { TIMES_TO_RESET = atoi(tmp); }
 
 	// define lattice parameters:
 	// any changes regarding topology should be done by creating a new lattice instance.
@@ -132,8 +143,8 @@ int main(int argc, char *argv[]) {
 			// record data after relaxation period and for pointsAfterRelaxation
 			// here we break up the loop in smaller chunks in order to refresh
 			// the total rate and avoid numerical errors
-			size_t chunkSize = pointsAfterRelaxation/NUM_CHUNKS;
-			for(size_t i = 0; i < NUM_CHUNKS; ++i) {
+			size_t chunkSize = pointsAfterRelaxation/TIMES_TO_RESET;
+			for(size_t i = 0; i < TIMES_TO_RESET; ++i) {
 				for (size_t j = 0; j < chunkSize; ++j) {
 					double dt = simulation.step();
 					double r = simulation.getOrderParameter();
